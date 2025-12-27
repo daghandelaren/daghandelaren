@@ -5,8 +5,17 @@ import Image from 'next/image';
 import HomepageLogin from './HomepageLogin';
 import AccessRequestModal from './AccessRequestModal';
 
+// Size type for floating items
+type FloatingSize = 'sm' | 'md' | 'lg' | 'xl';
+
 // Floating forex data for the background
-const floatingItems = [
+const floatingItems: Array<{
+  pair: string;
+  type: 'bullish' | 'bearish';
+  size: FloatingSize;
+  position: React.CSSProperties;
+  delay: string;
+}> = [
   { pair: 'GBP/JPY', type: 'bullish', size: 'lg', position: { top: '8%', left: '5%' }, delay: '0s' },
   { pair: 'EUR/USD', type: 'bearish', size: 'xl', position: { top: '15%', right: '8%' }, delay: '0.5s' },
   { pair: 'NZD/CHF', type: 'bullish', size: 'md', position: { top: '5%', right: '25%' }, delay: '1s' },
@@ -23,7 +32,15 @@ const floatingItems = [
   { pair: 'NZD/USD', type: 'bearish', size: 'sm', position: { bottom: '40%', left: '15%' }, delay: '6.5s' },
 ];
 
-function FloatingItem({ pair, type, size, position, delay }: typeof floatingItems[0]) {
+interface FloatingItemProps {
+  pair: string;
+  type: 'bullish' | 'bearish';
+  size: FloatingSize;
+  position: React.CSSProperties;
+  delay: string;
+}
+
+function FloatingItem({ pair, type, size, position, delay }: FloatingItemProps) {
   const sizeClasses = {
     sm: 'text-sm',
     md: 'text-base',
