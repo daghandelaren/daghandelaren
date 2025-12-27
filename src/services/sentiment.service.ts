@@ -419,11 +419,13 @@ export async function getHistoricalSentiment(
 }
 
 /**
- * Compute currency strength from sentiment data
- * For each currency:
- * - When it's the BASE currency (first in pair), use blendedNet directly
- * - When it's the QUOTE currency (second in pair), invert blendedNet
- * - Average all values = currency strength
+ * Compute currency strength from sentiment data (CONTRARIAN)
+ *
+ * For each pair like EUR/USD with 20% long, 80% short:
+ * - BASE (EUR) gets +shortPercent (+80) = contrarian bullish (retail is short)
+ * - QUOTE (USD) gets -longPercent (-20) = contrarian bearish (retail is long USD via short EUR/USD)
+ *
+ * Average all values per currency = currency strength
  */
 export function computeCurrencyStrength(sentimentData: AggregatedSentiment[]): CurrencyStrength[] {
   const currencyScores: Record<string, number[]> = {};
@@ -435,16 +437,17 @@ export function computeCurrencyStrength(sentimentData: AggregatedSentiment[]): C
 
   for (const item of sentimentData) {
     const { base, quote } = item.instrument;
-    const blendedNet = item.blendedNet;
+    const blendedShort = item.blendedShort;
+    const blendedLong = item.blendedLong;
 
-    // Add score for base currency (direct)
+    // BASE currency: +shortPercent (contrarian bullish when retail is short)
     if (currencyScores[base]) {
-      currencyScores[base].push(blendedNet);
+      currencyScores[base].push(blendedShort);
     }
 
-    // Add score for quote currency (inverted)
+    // QUOTE currency: -longPercent (contrarian bearish when retail is long the pair)
     if (currencyScores[quote]) {
-      currencyScores[quote].push(-blendedNet);
+      currencyScores[quote].push(-blendedLong);
     }
   }
 
