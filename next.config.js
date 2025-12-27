@@ -2,6 +2,7 @@
 const nextConfig = {
   // Externalize Puppeteer and related packages to prevent bundling issues
   experimental: {
+    instrumentationHook: true,
     serverComponentsExternalPackages: [
       'puppeteer',
       'puppeteer-core',
