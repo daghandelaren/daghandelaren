@@ -6,7 +6,7 @@
  * - OANDA: weight 2
  * - Dukascopy: weight 1
  * - ForexFactory: weight 1
- * - Forex.com: weight 1
+ * - FXBlue: weight 1
  *
  * Only available sources are used in the calculation.
  */
@@ -27,7 +27,7 @@ export interface BlendedResult {
     F: number;
     X: number;
   };
-  sourcesUsed: ('myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'forexcom')[];
+  sourcesUsed: ('myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'fxblue')[];
   totalWeight: number;
 }
 
@@ -37,7 +37,7 @@ const WEIGHTS = {
   oanda: 2,
   dukascopy: 1,
   forexfactory: 1,
-  forexcom: 1,
+  fxblue: 1,
 } as const;
 
 export interface BlendInput {
@@ -45,7 +45,7 @@ export interface BlendInput {
   oanda?: SourceSnapshot | null;
   dukascopy?: SourceSnapshot | null;
   forexfactory?: SourceSnapshot | null;
-  forexcom?: SourceSnapshot | null;
+  fxblue?: SourceSnapshot | null;
 }
 
 /**
@@ -67,7 +67,7 @@ export interface BlendInput {
 export function computeWeightedBlend(sources: BlendInput): BlendedResult {
   let weightedSum = 0;
   let totalWeight = 0;
-  const sourcesUsed: ('myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'forexcom')[] = [];
+  const sourcesUsed: ('myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'fxblue')[] = [];
   const weightsUsed = { M: 0, O: 0, D: 0, F: 0, X: 0 };
 
   // Process Myfxbook
@@ -103,11 +103,11 @@ export function computeWeightedBlend(sources: BlendInput): BlendedResult {
   }
 
   // Process Forex.com
-  if (sources.forexcom && isValidSnapshot(sources.forexcom)) {
-    weightedSum += WEIGHTS.forexcom * sources.forexcom.longPercent;
-    totalWeight += WEIGHTS.forexcom;
-    sourcesUsed.push('forexcom');
-    weightsUsed.X = WEIGHTS.forexcom;
+  if (sources.fxblue && isValidSnapshot(sources.fxblue)) {
+    weightedSum += WEIGHTS.fxblue * sources.fxblue.longPercent;
+    totalWeight += WEIGHTS.fxblue;
+    sourcesUsed.push('fxblue');
+    weightsUsed.X = WEIGHTS.fxblue;
   }
 
   // If no sources available, return 50/50
@@ -158,7 +158,7 @@ export function getSourceBadge(source: string): string {
       return 'D';
     case 'forexfactory':
       return 'F';
-    case 'forexcom':
+    case 'fxblue':
       return 'X';
     default:
       return source.charAt(0).toUpperCase();
@@ -168,8 +168,8 @@ export function getSourceBadge(source: string): string {
 /**
  * Get all possible source names
  */
-export function getAllSources(): ('myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'forexcom')[] {
-  return ['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'forexcom'];
+export function getAllSources(): ('myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'fxblue')[] {
+  return ['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'fxblue'];
 }
 
 /**

@@ -80,7 +80,7 @@ export async function getLatestSentiment(filters?: SentimentFilters): Promise<Ag
         oanda?: SourceSnapshot;
         dukascopy?: SourceSnapshot;
         forexfactory?: SourceSnapshot;
-        forexcom?: SourceSnapshot;
+        fxblue?: SourceSnapshot;
       } = {};
 
       for (const sd of sourcesData) {
@@ -99,8 +99,8 @@ export async function getLatestSentiment(filters?: SentimentFilters): Promise<Ag
           blendInput.dukascopy = snapshot;
         } else if (sourceName === 'forexfactory') {
           blendInput.forexfactory = snapshot;
-        } else if (sourceName === 'forexcom') {
-          blendInput.forexcom = snapshot;
+        } else if (sourceName === 'fxblue') {
+          blendInput.fxblue = snapshot;
         }
       }
 
@@ -360,7 +360,7 @@ export async function getHistoricalSentiment(
   });
 
   // Group snapshots by time bucket (hour or day) and compute blended values
-  const groupedData = new Map<string, { myfxbook?: SourceSnapshot; oanda?: SourceSnapshot; dukascopy?: SourceSnapshot; forexfactory?: SourceSnapshot; forexcom?: SourceSnapshot }>();
+  const groupedData = new Map<string, { myfxbook?: SourceSnapshot; oanda?: SourceSnapshot; dukascopy?: SourceSnapshot; forexfactory?: SourceSnapshot; fxblue?: SourceSnapshot }>();
 
   for (const snapshot of snapshots) {
     // Create time bucket key based on interval
@@ -394,8 +394,8 @@ export async function getHistoricalSentiment(
       bucketData.dukascopy = sourceSnapshot;
     } else if (sourceName === 'forexfactory') {
       bucketData.forexfactory = sourceSnapshot;
-    } else if (sourceName === 'forexcom') {
-      bucketData.forexcom = sourceSnapshot;
+    } else if (sourceName === 'fxblue') {
+      bucketData.fxblue = sourceSnapshot;
     }
   }
 
@@ -508,7 +508,7 @@ export async function getSignalChanges(currentData: AggregatedSentiment[]): Prom
       oanda?: SourceSnapshot;
       dukascopy?: SourceSnapshot;
       forexfactory?: SourceSnapshot;
-      forexcom?: SourceSnapshot;
+      fxblue?: SourceSnapshot;
     } = {};
 
     for (const snapshot of historicalSnapshots) {
@@ -523,7 +523,7 @@ export async function getSignalChanges(currentData: AggregatedSentiment[]): Prom
       else if (sourceName === 'oanda') historicalInput.oanda = sourceSnapshot;
       else if (sourceName === 'dukascopy') historicalInput.dukascopy = sourceSnapshot;
       else if (sourceName === 'forexfactory') historicalInput.forexfactory = sourceSnapshot;
-      else if (sourceName === 'forexcom') historicalInput.forexcom = sourceSnapshot;
+      else if (sourceName === 'fxblue') historicalInput.fxblue = sourceSnapshot;
     }
 
     const historicalBlended = computeWeightedBlend(historicalInput);

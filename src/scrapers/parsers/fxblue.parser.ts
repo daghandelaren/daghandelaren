@@ -1,7 +1,7 @@
 import { ScrapedSentiment } from '@/types';
 import { normalizeSymbol } from '@/lib/utils';
 
-// Symbol mapping for Forex.com instruments to canonical format
+// Symbol mapping for FXBlue instruments to canonical format
 const SYMBOL_MAP: Record<string, string> = {
   // Forex pairs - various formats to standard
   'EURUSD': 'EUR/USD',
@@ -73,18 +73,18 @@ const SYMBOL_MAP: Record<string, string> = {
 const BLOCKED_SYMBOLS = new Set(['BTC', 'ETH', 'BTCUSD', 'ETHUSD']);
 
 /**
- * Raw position data extracted from Forex.com
+ * Raw position data extracted from FXBlue
  */
-export interface ForexcomPosition {
+export interface FxbluePosition {
   symbol: string;
   longPercent: number;
   shortPercent: number;
 }
 
 /**
- * Normalize Forex.com symbol to canonical format
+ * Normalize FXBlue symbol to canonical format
  */
-export function normalizeForexcomSymbol(symbol: string): string | null {
+export function normalizeFxblueSymbol(symbol: string): string | null {
   // Clean the symbol
   const cleaned = symbol.toUpperCase().replace(/[_-]/g, '').trim();
 
@@ -114,15 +114,15 @@ export function normalizeForexcomSymbol(symbol: string): string | null {
 }
 
 /**
- * Parse Forex.com position data
+ * Parse FXBlue position data
  * Converts raw extracted data to ScrapedSentiment format
  */
-export function parseForexcomData(positions: ForexcomPosition[]): ScrapedSentiment[] {
+export function parseFxblueData(positions: FxbluePosition[]): ScrapedSentiment[] {
   const results: ScrapedSentiment[] = [];
   const seen = new Set<string>();
 
   for (const position of positions) {
-    const normalizedSymbol = normalizeForexcomSymbol(position.symbol);
+    const normalizedSymbol = normalizeFxblueSymbol(position.symbol);
     if (!normalizedSymbol) continue;
 
     const key = normalizedSymbol.replace(/[/_-]/g, '').toUpperCase();

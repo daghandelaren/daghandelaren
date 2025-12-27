@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 // Use dynamic imports to prevent Puppeteer from being bundled
-type ScraperName = 'myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'forexcom';
+type ScraperName = 'myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'fxblue';
 
 // POST /api/scrape - Trigger scraping (admin only)
 export async function POST(request: NextRequest) {
@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
 
     if (source) {
       // Run specific scraper
-      if (!['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'forexcom'].includes(source)) {
+      if (!['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'fxblue'].includes(source)) {
         return NextResponse.json(
-          { error: 'Invalid source. Must be one of: myfxbook, oanda, dukascopy, forexfactory, forexcom' },
+          { error: 'Invalid source. Must be one of: myfxbook, oanda, dukascopy, forexfactory, fxblue' },
           { status: 400 }
         );
       }

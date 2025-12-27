@@ -9,7 +9,7 @@ const rateLimiter = new RateLimiter();
 // Cache for scraper results
 const scraperCache = new SimpleCache<ScraperResult>();
 
-export type ScraperName = 'myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'forexcom';
+export type ScraperName = 'myfxbook' | 'oanda' | 'dukascopy' | 'forexfactory' | 'fxblue';
 
 // Scraper function type
 type ScraperFn = () => Promise<ScraperResult>;
@@ -25,12 +25,12 @@ async function getScraperFn(name: ScraperName): Promise<ScraperFn> {
       return (await import('./dukascopy')).scrapeDukascopy;
     case 'forexfactory':
       return (await import('./forexfactory')).scrapeForexFactory;
-    case 'forexcom':
-      return (await import('./forexcom')).scrapeForexcom;
+    case 'fxblue':
+      return (await import('./fxblue')).scrapeFxblue;
   }
 }
 
-const scraperNames: ScraperName[] = ['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'forexcom'];
+const scraperNames: ScraperName[] = ['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'fxblue'];
 
 // Run a single scraper with rate limiting and caching
 export async function runScraper(name: ScraperName): Promise<ScraperResult> {

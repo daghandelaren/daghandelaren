@@ -1,16 +1,15 @@
 import { Browser, Page, Frame } from 'puppeteer';
 import { ScraperResult } from '@/types';
 import { logger } from '@/lib/utils';
-import { parseForexcomData, ForexcomPosition } from './parsers/forexcom.parser';
+import { parseFxblueData, FxbluePosition } from './parsers/fxblue.parser';
 
 // Use require for puppeteer-extra to avoid TypeScript issues
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
-// Add stealth plugin to bypass Cloudflare
+// Add stealth plugin to bypass bot detection
 puppeteer.use(StealthPlugin());
 
-// Use FXBlue directly (source of Forex.com sentiment data)
 const FXBLUE_URL = 'https://www.fxblue.com/market-data/tools/sentiment';
 
 /**
@@ -33,7 +32,7 @@ async function launchBrowser(): Promise<Browser> {
 /**
  * Try to extract sentiment from a frame (main page or iframe)
  */
-async function extractFromFrame(frame: Frame | Page): Promise<ForexcomPosition[]> {
+async function extractFromFrame(frame: Frame | Page): Promise<FxbluePosition[]> {
   try {
     return await frame.evaluate(() => {
       const results: Array<{ symbol: string; longPercent: number; shortPercent: number }> = [];
@@ -85,8 +84,8 @@ async function extractFromFrame(frame: Frame | Page): Promise<ForexcomPosition[]
 /**
  * Extract sentiment data from the page, including iframes
  */
-async function extractSentiment(page: Page): Promise<ForexcomPosition[]> {
-  let allPositions: ForexcomPosition[] = [];
+async function extractSentiment(page: Page): Promise<FxbluePosition[]> {
+  let allPositions: FxbluePosition[] = [];
 
   // Try main frame first
   const mainResults = await extractFromFrame(page);
@@ -115,9 +114,9 @@ async function extractSentiment(page: Page): Promise<ForexcomPosition[]> {
 }
 
 /**
- * Try to scrape from a single URL
+ * Try to scrape from FXBlue URL
  */
-async function tryUrl(browser: Browser, url: string): Promise<ForexcomPosition[]> {
+async function tryUrl(browser: Browser, url: string): Promise<FxbluePosition[]> {
   const page = await browser.newPage();
 
   try {
@@ -126,7 +125,7 @@ async function tryUrl(browser: Browser, url: string): Promise<ForexcomPosition[]
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     );
 
-    logger.debug(`Forex.com: Trying ${url}`);
+    logger.debug(`FXBlue: Navigating to ${url}`);
 
     await page.goto(url, {
       waitUntil: 'networkidle2',
@@ -149,7 +148,7 @@ async function tryUrl(browser: Browser, url: string): Promise<ForexcomPosition[]
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     const positions = await extractSentiment(page);
-    logger.debug(`Forex.com: Found ${positions.length} positions from ${url}`);
+    logger.debug(`FXBlue: Found ${positions.length} positions`);
 
     return positions;
   } finally {
@@ -158,9 +157,9 @@ async function tryUrl(browser: Browser, url: string): Promise<ForexcomPosition[]
 }
 
 /**
- * Main scraper function for Forex.com (via FXBlue)
+ * Main scraper function for FXBlue
  */
-export async function scrapeForexcom(): Promise<ScraperResult> {
+export async function scrapeFxblue(): Promise<ScraperResult> {
   const timestamp = new Date();
   let browser: Browser | null = null;
 
@@ -171,13 +170,13 @@ export async function scrapeForexcom(): Promise<ScraperResult> {
     const positions = await tryUrl(browser, FXBLUE_URL);
 
     if (positions.length > 0) {
-      const data = parseForexcomData(positions);
+      const data = parseFxblueData(positions);
 
       if (data.length > 0) {
         logger.info(`FXBlue scraped ${data.length} instruments`);
         return {
           success: true,
-          source: 'forexcom',
+          source: 'fxblue',
           data,
           timestamp,
         };
@@ -187,17 +186,17 @@ export async function scrapeForexcom(): Promise<ScraperResult> {
     logger.warn('FXBlue: No sentiment data found');
     return {
       success: false,
-      source: 'forexcom',
+      source: 'fxblue',
       data: [],
       error: 'No sentiment data found on FXBlue',
       timestamp,
     };
 
   } catch (error) {
-    logger.error('Forex.com scraper error:', error);
+    logger.error('FXBlue scraper error:', error);
     return {
       success: false,
-      source: 'forexcom',
+      source: 'fxblue',
       data: [],
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp,

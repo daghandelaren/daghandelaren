@@ -81,8 +81,8 @@ const SOURCES = [
     baseUrl: 'https://www.forexfactory.com/trades',
   },
   {
-    name: 'forexcom',
-    baseUrl: 'https://www.forex.com/en-us/trading-tools/client-sentiment/',
+    name: 'fxblue',
+    baseUrl: 'https://www.fxblue.com/market-data/tools/sentiment',
   },
 ];
 
