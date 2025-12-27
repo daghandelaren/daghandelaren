@@ -44,5 +44,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Run migrations and start the application
-CMD npx prisma db push && npm start
+# Run migrations, seed, and start the application
+CMD npx prisma db push && npx prisma db seed && npm start
