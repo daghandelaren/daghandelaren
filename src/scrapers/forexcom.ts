@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import { Browser, Page } from 'puppeteer';
 import { ScraperResult } from '@/types';
 import { logger } from '@/lib/utils';
