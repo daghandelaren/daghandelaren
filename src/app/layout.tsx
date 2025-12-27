@@ -7,7 +7,7 @@ import { LOGO_BASE64 } from '@/constants/logo';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Daghandelaren - Forex Sentiment Dashboard',
+  title: 'Daghandelaren - Trading Dashboard',
   description: 'Real-time forex sentiment data from multiple sources',
   keywords: ['forex', 'sentiment', 'trading', 'dashboard', 'analysis'],
 };
