@@ -33,33 +33,83 @@ async function launchBrowser(): Promise<Browser> {
  * Extract sentiment data from the Forex.com page
  */
 async function extractSentiment(page: Page): Promise<ForexcomPosition[]> {
+  const capturedData: ForexcomPosition[] = [];
+
   try {
+    // Intercept network requests to capture sentiment API data
+    await page.setRequestInterception(true);
+
+    page.on('request', (request) => {
+      request.continue();
+    });
+
+    page.on('response', async (response) => {
+      const url = response.url();
+      // Look for API calls that might contain sentiment data
+      if (url.includes('sentiment') || url.includes('position') || url.includes('ratio')) {
+        try {
+          const contentType = response.headers()['content-type'] || '';
+          if (contentType.includes('json')) {
+            const json = await response.json();
+            logger.debug('Forex.com API response:', url);
+            // Try to extract data from the API response
+            if (Array.isArray(json)) {
+              for (const item of json) {
+                if (item.symbol && (item.longPercent !== undefined || item.long !== undefined)) {
+                  capturedData.push({
+                    symbol: item.symbol,
+                    longPercent: item.longPercent ?? item.long ?? 0,
+                    shortPercent: item.shortPercent ?? item.short ?? 0,
+                  });
+                }
+              }
+            }
+          }
+        } catch {
+          // Ignore response parsing errors
+        }
+      }
+    });
+
     logger.debug('Navigating to Forex.com sentiment page');
 
     await page.goto(FOREXCOM_SENTIMENT_URL, {
-      waitUntil: 'networkidle2',
+      waitUntil: 'networkidle0',
       timeout: 60000,
     });
 
-    // Wait for sentiment data to load
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait longer for JavaScript to render the sentiment widget
+    await new Promise(resolve => setTimeout(resolve, 8000));
 
-    // Extract sentiment data from the page
+    // Scroll down to trigger lazy loading
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight / 2);
+    });
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // If we captured data from API, return it
+    if (capturedData.length > 0) {
+      logger.debug(`Captured ${capturedData.length} positions from Forex.com API`);
+      return capturedData;
+    }
+
+    // Otherwise try to extract from DOM
     const positions = await page.evaluate(() => {
       const results: Array<{ symbol: string; longPercent: number; shortPercent: number }> = [];
       const seen = new Set<string>();
 
-      // Try to find sentiment data in various possible formats
-      // Look for elements containing percentage data
+      // Method 1: Look for sentiment widget/table rows
+      const allElements = document.querySelectorAll('*');
 
-      // Method 1: Look for table rows with sentiment data
-      const rows = document.querySelectorAll('tr, [class*="sentiment"], [class*="instrument"]');
+      for (const el of allElements) {
+        const text = el.textContent || '';
+        const classList = el.className || '';
 
-      for (const row of rows) {
-        const text = row.textContent || '';
+        // Skip if element has too much text (likely a container)
+        if (text.length > 500) continue;
 
-        // Look for forex pair pattern (e.g., EUR/USD, EURUSD)
-        const pairMatch = text.match(/([A-Z]{3})\/?([A-Z]{3})/);
+        // Look for forex pair pattern
+        const pairMatch = text.match(/\b([A-Z]{3})[\s\/]?([A-Z]{3})\b/);
         if (!pairMatch) continue;
 
         const symbol = `${pairMatch[1]}/${pairMatch[2]}`;
@@ -67,16 +117,13 @@ async function extractSentiment(page: Page): Promise<ForexcomPosition[]> {
 
         if (seen.has(key)) continue;
 
-        // Look for percentage patterns (e.g., "65%" or "65.5%")
-        const percentages = text.match(/(\d+\.?\d*)%/g);
+        // Look for percentage patterns
+        const percentages = text.match(/(\d{1,2}(?:\.\d+)?)\s*%/g);
 
         if (percentages && percentages.length >= 2) {
-          const values = percentages.map(p => parseFloat(p.replace('%', '')));
+          const values = percentages.slice(0, 2).map(p => parseFloat(p.replace('%', '')));
 
-          // Validate that we have reasonable percentages
           if (values[0] >= 0 && values[0] <= 100 && values[1] >= 0 && values[1] <= 100) {
-            // Typically first percentage is long, second is short
-            // But they might sum to 100, so validate
             if (Math.abs(values[0] + values[1] - 100) <= 5) {
               seen.add(key);
               results.push({
@@ -89,26 +136,66 @@ async function extractSentiment(page: Page): Promise<ForexcomPosition[]> {
         }
       }
 
-      // Method 2: Look for data attributes or JSON data
-      const scripts = document.querySelectorAll('script');
+      // Method 2: Check for sentiment data in __NEXT_DATA__ or similar
+      const nextDataScript = document.getElementById('__NEXT_DATA__');
+      if (nextDataScript) {
+        try {
+          const data = JSON.parse(nextDataScript.textContent || '{}');
+          const searchForSentiment = (obj: unknown, depth = 0): void => {
+            if (depth > 10 || !obj || typeof obj !== 'object') return;
+
+            if (Array.isArray(obj)) {
+              for (const item of obj) {
+                if (item && typeof item === 'object' && 'symbol' in item) {
+                  const i = item as Record<string, unknown>;
+                  if (typeof i.long === 'number' || typeof i.longPercent === 'number') {
+                    const symbol = String(i.symbol);
+                    const key = symbol.replace(/[/_]/g, '');
+                    if (!seen.has(key)) {
+                      seen.add(key);
+                      results.push({
+                        symbol,
+                        longPercent: (i.longPercent as number) ?? (i.long as number) ?? 0,
+                        shortPercent: (i.shortPercent as number) ?? (i.short as number) ?? 0,
+                      });
+                    }
+                  }
+                }
+                searchForSentiment(item, depth + 1);
+              }
+            } else {
+              for (const value of Object.values(obj)) {
+                searchForSentiment(value, depth + 1);
+              }
+            }
+          };
+          searchForSentiment(data);
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      // Method 3: Check all script tags for embedded JSON data
+      const scripts = document.querySelectorAll('script:not([src])');
       for (const script of scripts) {
         const content = script.textContent || '';
-
-        // Look for JSON data with sentiment info
-        const jsonMatch = content.match(/\{[^{}]*"symbol"[^{}]*"long"[^{}]*\}/g);
-        if (jsonMatch) {
-          for (const match of jsonMatch) {
+        // Look for arrays with sentiment-like objects
+        const matches = content.match(/\[\s*\{[^[\]]*"(?:symbol|instrument|pair)"[^[\]]*\}\s*(?:,\s*\{[^[\]]*\}\s*)*\]/g);
+        if (matches) {
+          for (const match of matches) {
             try {
-              const data = JSON.parse(match);
-              if (data.symbol && typeof data.long === 'number' && typeof data.short === 'number') {
-                const key = data.symbol.replace(/[/_]/g, '');
-                if (!seen.has(key)) {
-                  seen.add(key);
-                  results.push({
-                    symbol: data.symbol,
-                    longPercent: data.long,
-                    shortPercent: data.short,
-                  });
+              const arr = JSON.parse(match);
+              for (const item of arr) {
+                if (item.symbol && (item.long !== undefined || item.longPercent !== undefined)) {
+                  const key = item.symbol.replace(/[/_]/g, '');
+                  if (!seen.has(key)) {
+                    seen.add(key);
+                    results.push({
+                      symbol: item.symbol,
+                      longPercent: item.longPercent ?? item.long ?? 0,
+                      shortPercent: item.shortPercent ?? item.short ?? 0,
+                    });
+                  }
                 }
               }
             } catch {
@@ -118,49 +205,15 @@ async function extractSentiment(page: Page): Promise<ForexcomPosition[]> {
         }
       }
 
-      // Method 3: Look for specific CSS class patterns common in sentiment widgets
-      const widgets = document.querySelectorAll('[class*="bar"], [class*="gauge"], [class*="percent"]');
-      for (const widget of widgets) {
-        const parent = widget.closest('[class*="row"], [class*="item"], [class*="card"]');
-        if (!parent) continue;
-
-        const parentText = parent.textContent || '';
-        const pairMatch = parentText.match(/([A-Z]{3})\/?([A-Z]{3})/);
-        if (!pairMatch) continue;
-
-        const symbol = `${pairMatch[1]}/${pairMatch[2]}`;
-        const key = symbol.replace('/', '');
-
-        if (seen.has(key)) continue;
-
-        // Look for width style or data attributes that might indicate percentage
-        const style = widget.getAttribute('style') || '';
-        const widthMatch = style.match(/width:\s*(\d+\.?\d*)%/);
-
-        if (widthMatch) {
-          const longPercent = parseFloat(widthMatch[1]);
-          const shortPercent = 100 - longPercent;
-
-          if (longPercent >= 0 && longPercent <= 100) {
-            seen.add(key);
-            results.push({
-              symbol,
-              longPercent,
-              shortPercent,
-            });
-          }
-        }
-      }
-
       return results;
     });
 
-    logger.debug(`Extracted ${positions.length} positions from Forex.com`);
+    logger.debug(`Extracted ${positions.length} positions from Forex.com DOM`);
     return positions;
 
   } catch (error) {
     logger.error('Error extracting Forex.com sentiment:', error);
-    return [];
+    return capturedData.length > 0 ? capturedData : [];
   }
 }
 
