@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for production-like testing
+  db:
+    image: postgres:15-alpine
+    container_name: daghandelaren-db
+    environment:
+      POSTGRES_USER: daghandelaren
+      POSTGRES_PASSWORD: daghandelaren
+      POSTGRES_DB: daghandelaren
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U daghandelaren']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

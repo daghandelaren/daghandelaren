@@ -1,0 +1,38 @@
+{
+  "instruments": [
+    {
+      "symbol": "EUR/USD",
+      "long": 42.5,
+      "short": 57.5
+    },
+    {
+      "symbol": "GBP/USD",
+      "longPercent": 38.0,
+      "shortPercent": 62.0
+    },
+    {
+      "instrument": "USD_JPY",
+      "buy": 65.3,
+      "sell": 34.7
+    },
+    {
+      "pair": "AUDUSD",
+      "bullish": 52.0,
+      "bearish": 48.0
+    },
+    {
+      "symbol": "XAU/USD",
+      "long": 70.5,
+      "short": 29.5
+    },
+    {
+      "symbol": "EUR/GBP",
+      "index": 15
+    },
+    {
+      "symbol": "GBP/JPY",
+      "long": 0.45,
+      "short": 0.55
+    }
+  ]
+}

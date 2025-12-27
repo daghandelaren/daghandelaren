@@ -1,0 +1,34 @@
+{
+  "instruments": [
+    {
+      "instrument": "EUR_USD",
+      "longPercent": 35.5,
+      "shortPercent": 64.5
+    },
+    {
+      "instrument": "GBP_USD",
+      "longPercent": 42.3,
+      "shortPercent": 57.7
+    },
+    {
+      "instrument": "USD_JPY",
+      "longPercent": 68.2,
+      "shortPercent": 31.8
+    },
+    {
+      "instrument": "AUD_USD",
+      "longPercent": 55.0,
+      "shortPercent": 45.0
+    },
+    {
+      "instrument": "XAU_USD",
+      "longPercent": 72.5,
+      "shortPercent": 27.5
+    },
+    {
+      "instrument": "EUR_GBP",
+      "long": 0.48,
+      "short": 0.52
+    }
+  ]
+}

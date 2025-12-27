@@ -1,0 +1,62 @@
+// Prisma schema for Daghandelaren
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         String   @default("USER") // "USER" or "ADMIN"
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Data source configuration
+model SentimentSource {
+  id        String   @id @default(cuid())
+  name      String   @unique // "myfxbook", "oanda", "dukascopy"
+  baseUrl   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  snapshots SentimentSnapshot[]
+}
+
+// Trading instrument (forex pair, commodity, index)
+model Instrument {
+  id         String   @id @default(cuid())
+  symbol     String   @unique // "EUR/USD", "XAU/USD"
+  base       String // "EUR", "XAU"
+  quote      String // "USD"
+  assetClass String // "forex", "commodity", "index"
+  createdAt  DateTime @default(now())
+
+  snapshots SentimentSnapshot[]
+}
+
+// Sentiment data snapshot
+model SentimentSnapshot {
+  id           String   @id @default(cuid())
+  instrumentId String
+  sourceId     String
+  longPercent  Float // % of traders long
+  shortPercent Float // % of traders short
+  netSentiment Float // longPercent - shortPercent
+  timestamp    DateTime @default(now())
+
+  instrument Instrument      @relation(fields: [instrumentId], references: [id])
+  source     SentimentSource @relation(fields: [sourceId], references: [id])
+
+  @@index([instrumentId, sourceId, timestamp])
+  @@index([timestamp])
+}

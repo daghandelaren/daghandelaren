@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head><title>OANDA Sentiment</title></head>
+<body>
+  <div class="sentiment-container">
+    <div class="instrument-row">
+      <span class="symbol">EUR/USD</span>
+      <span class="long-percent">35.5%</span>
+      <span class="short-percent">64.5%</span>
+    </div>
+    <div class="instrument-row">
+      <span class="symbol">GBPUSD</span>
+      <div class="sentiment-bar">
+        <span class="long">42% long</span>
+        <span class="short">58% short</span>
+      </div>
+    </div>
+    <table>
+      <tbody>
+        <tr>
+          <td>USD_JPY</td>
+          <td>68.2</td>
+          <td>31.8</td>
+        </tr>
+        <tr>
+          <td>AUD-USD</td>
+          <td>55.0%</td>
+          <td>45.0%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- JSON embedded in script -->
+  <script type="application/json">
+    {"instrument": "EUR_CHF", "longPercent": 30, "shortPercent": 70}
+  </script>
+</body>
+</html>
