@@ -55,7 +55,8 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "WebFetch(domain:www.fxblue.com)",
-      "WebFetch(domain:figaro.fxbluelabs.com)"
+      "WebFetch(domain:figaro.fxbluelabs.com)",
+      "Bash(ls:*)"
     ]
   }
 }
