@@ -46,7 +46,7 @@ export default function AccessRequestForm() {
         </div>
         <h3 className="text-base font-semibold text-text-primary mb-1">Request Submitted</h3>
         <p className="text-text-secondary text-sm">
-          Thanks for your request. You'll hear from us if access is granted.
+          Thanks for your request. You&apos;ll hear from us if access is granted.
         </p>
       </div>
     );
