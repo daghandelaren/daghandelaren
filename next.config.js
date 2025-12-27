@@ -12,16 +12,6 @@ const nextConfig = {
       'merge-deep',
     ],
   },
-  // Also add at root level for newer Next.js versions
-  serverExternalPackages: [
-    'puppeteer',
-    'puppeteer-core',
-    'puppeteer-extra',
-    'puppeteer-extra-plugin',
-    'puppeteer-extra-plugin-stealth',
-    'clone-deep',
-    'merge-deep',
-  ],
   // Disable webpack bundling for these packages
   webpack: (config, { isServer }) => {
     if (isServer) {
