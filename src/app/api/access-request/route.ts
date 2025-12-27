@@ -48,6 +48,24 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Access request error:', error);
+
+    // Provide more specific error messages
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('EAUTH') || errorMessage.includes('Invalid login')) {
+      return NextResponse.json(
+        { error: 'Email authentication failed. Please check SMTP credentials.' },
+        { status: 500 }
+      );
+    }
+
+    if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ETIMEDOUT')) {
+      return NextResponse.json(
+        { error: 'Could not connect to email server. Please check SMTP settings.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to submit access request. Please try again later.' },
       { status: 500 }
