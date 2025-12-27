@@ -53,7 +53,9 @@
       "Bash(git config:*)",
       "Bash(git remote add:*)",
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebFetch(domain:www.fxblue.com)",
+      "WebFetch(domain:figaro.fxbluelabs.com)"
     ]
   }
 }
