@@ -108,7 +108,7 @@ export default function LoginPageContent() {
           <div className="bg-surface-primary/90 backdrop-blur-xl border border-border-primary/50 rounded-2xl p-8 shadow-2xl shadow-black/50">
             {/* Logo */}
             <div className="text-center mb-8">
-              <div className="w-20 h-20 mx-auto mb-4 bg-accent-blue/20 rounded-full p-2 flex items-center justify-center">
+              <div className="w-32 h-32 mx-auto mb-4 bg-accent-blue/20 rounded-full p-3 flex items-center justify-center">
                 <img
                   src={LOGO_BASE64}
                   alt="Daghandelaren Logo"

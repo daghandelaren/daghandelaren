@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   title: 'Daghandelaren - Forex Sentiment Dashboard',
   description: 'Real-time forex sentiment data from multiple sources',
   keywords: ['forex', 'sentiment', 'trading', 'dashboard', 'analysis'],
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
