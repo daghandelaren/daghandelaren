@@ -38,14 +38,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
-
-# Build the application
+# Build the application (prisma generate runs via postinstall)
 RUN npm run build
 
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+# Run migrations and start the application
+CMD npx prisma db push && npm start
