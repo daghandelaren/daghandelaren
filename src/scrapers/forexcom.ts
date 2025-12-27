@@ -10,11 +10,8 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 // Add stealth plugin to bypass Cloudflare
 puppeteer.use(StealthPlugin());
 
-// Try both Forex.com and FXBlue directly
-const URLS = [
-  'https://www.forex.com/en-us/trading-tools/client-sentiment/',
-  'https://www.fxblue.com/market-data/tools/sentiment',
-];
+// Use FXBlue directly (source of Forex.com sentiment data)
+const FXBLUE_URL = 'https://www.fxblue.com/market-data/tools/sentiment';
 
 /**
  * Launch a Puppeteer browser instance
@@ -161,46 +158,38 @@ async function tryUrl(browser: Browser, url: string): Promise<ForexcomPosition[]
 }
 
 /**
- * Main scraper function for Forex.com
+ * Main scraper function for Forex.com (via FXBlue)
  */
 export async function scrapeForexcom(): Promise<ScraperResult> {
   const timestamp = new Date();
   let browser: Browser | null = null;
 
   try {
-    logger.debug('Starting Forex.com scraper');
+    logger.debug('Starting FXBlue scraper');
     browser = await launchBrowser();
 
-    // Try each URL until we get data
-    for (const url of URLS) {
-      try {
-        const positions = await tryUrl(browser, url);
+    const positions = await tryUrl(browser, FXBLUE_URL);
 
-        if (positions.length > 0) {
-          const data = parseForexcomData(positions);
+    if (positions.length > 0) {
+      const data = parseForexcomData(positions);
 
-          if (data.length > 0) {
-            logger.info(`Forex.com scraped ${data.length} instruments from ${url}`);
-            return {
-              success: true,
-              source: 'forexcom',
-              data,
-              timestamp,
-            };
-          }
-        }
-      } catch (error) {
-        logger.debug(`Forex.com: Failed to scrape ${url}: ${error}`);
+      if (data.length > 0) {
+        logger.info(`FXBlue scraped ${data.length} instruments`);
+        return {
+          success: true,
+          source: 'forexcom',
+          data,
+          timestamp,
+        };
       }
     }
 
-    // All URLs failed
-    logger.warn('Forex.com: No sentiment data found from any source');
+    logger.warn('FXBlue: No sentiment data found');
     return {
       success: false,
       source: 'forexcom',
       data: [],
-      error: 'No sentiment data found on Forex.com or FXBlue',
+      error: 'No sentiment data found on FXBlue',
       timestamp,
     };
 
