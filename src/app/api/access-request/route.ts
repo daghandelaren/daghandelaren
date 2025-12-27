@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendAccessRequestEmail } from '@/lib/email';
+import { prisma } from '@/lib/prisma';
 import { validateEmail } from '@/services/user.service';
 
 export async function POST(request: NextRequest) {
@@ -39,8 +39,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send email (don't store in DB per requirements)
-    await sendAccessRequestEmail({ name: name.trim(), email: email.trim(), reason: reason.trim() });
+    // Save to database
+    await prisma.accessRequest.create({
+      data: {
+        name: name.trim(),
+        email: email.trim(),
+        reason: reason.trim(),
+      },
+    });
 
     return NextResponse.json(
       { message: 'Access request submitted successfully' },
@@ -48,24 +54,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Access request error:', error);
-
-    // Provide more specific error messages
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    if (errorMessage.includes('EAUTH') || errorMessage.includes('Invalid login')) {
-      return NextResponse.json(
-        { error: 'Email authentication failed. Please check SMTP credentials.' },
-        { status: 500 }
-      );
-    }
-
-    if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ETIMEDOUT')) {
-      return NextResponse.json(
-        { error: 'Could not connect to email server. Please check SMTP settings.' },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json(
       { error: 'Failed to submit access request. Please try again later.' },
       { status: 500 }

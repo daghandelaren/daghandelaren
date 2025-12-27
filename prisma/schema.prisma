@@ -44,6 +44,20 @@ model Instrument {
   snapshots SentimentSnapshot[]
 }
 
+// Access requests from login page
+model AccessRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  reason    String
+  status    String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
 // Sentiment data snapshot
 model SentimentSnapshot {
   id           String   @id @default(cuid())
