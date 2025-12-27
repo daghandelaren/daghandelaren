@@ -107,11 +107,15 @@ export default function LoginPageContent() {
           <div className="bg-surface-primary/90 backdrop-blur-xl border border-border-primary/50 rounded-2xl p-8 shadow-2xl shadow-black/50">
             {/* Logo */}
             <div className="text-center mb-8">
-              <div className="w-20 h-20 mx-auto mb-4">
+              <div className="w-20 h-20 mx-auto mb-4 bg-accent-blue/20 rounded-full p-2 flex items-center justify-center">
                 <img
                   src="/logo.png"
                   alt="Daghandelaren Logo"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain drop-shadow-lg"
+                  onError={(e) => {
+                    console.error('Logo failed to load');
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               </div>
               <h1 className="text-3xl font-bold text-text-primary tracking-tight">
