@@ -44,6 +44,21 @@ model Instrument {
   snapshots SentimentSnapshot[]
 }
 
+// Scraper run logs (auto-cleaned after 12 hours)
+model ScraperLog {
+  id              String   @id @default(cuid())
+  timestamp       DateTime @default(now())
+  totalScrapers   Int
+  successCount    Int
+  failedCount     Int
+  instrumentCount Int
+  failedScrapers  String[] // Names of failed scrapers
+  errorMessages   String[] // Error messages from failed scrapers
+  deletedSnapshots Int     @default(0)
+
+  @@index([timestamp])
+}
+
 // Access requests from login page
 model AccessRequest {
   id        String   @id @default(cuid())

@@ -1,8 +1,24 @@
 import { logger } from './utils';
+import { prisma } from './prisma';
 
 const ONE_HOUR = 60 * 60 * 1000;
+const TWELVE_HOURS = 12 * ONE_HOUR;
 
 let isSchedulerRunning = false;
+
+async function cleanupOldLogs() {
+  try {
+    const cutoff = new Date(Date.now() - TWELVE_HOURS);
+    const result = await prisma.scraperLog.deleteMany({
+      where: { timestamp: { lt: cutoff } },
+    });
+    if (result.count > 0) {
+      logger.info(`[Scheduler] Cleaned up ${result.count} old scraper logs`);
+    }
+  } catch (error) {
+    logger.error('[Scheduler] Failed to cleanup old logs:', error);
+  }
+}
 
 async function runScrapeJob() {
   try {
@@ -19,12 +35,33 @@ async function runScrapeJob() {
     const failed = results.filter(r => !r.success).length;
     const instruments = results.reduce((sum, r) => sum + r.data.length, 0);
 
+    // Get failed scraper details
+    const failedResults = results.filter(r => !r.success);
+    const failedScraperNames = failedResults.map(r => r.source);
+    const errorMessages = failedResults.map(r => r.error || 'Unknown error');
+
+    // Log to database
+    await prisma.scraperLog.create({
+      data: {
+        totalScrapers: results.length,
+        successCount: successful,
+        failedCount: failed,
+        instrumentCount: instruments,
+        failedScrapers: failedScraperNames,
+        errorMessages: errorMessages,
+        deletedSnapshots: deletedCount,
+      },
+    });
+
     logger.info(`[Scheduler] Scrape completed: ${successful}/${results.length} scrapers succeeded, ${instruments} instruments, ${deletedCount} old snapshots deleted`);
 
     if (failed > 0) {
       const failedScrapers = results.filter(r => !r.success).map(r => `${r.source}: ${r.error}`);
       logger.warn('[Scheduler] Failed scrapers:', failedScrapers);
     }
+
+    // Cleanup old logs
+    await cleanupOldLogs();
   } catch (error) {
     logger.error('[Scheduler] Scrape job failed:', error);
   }
