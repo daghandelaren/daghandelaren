@@ -30,7 +30,8 @@ async function getScraperFn(name: ScraperName): Promise<ScraperFn> {
   }
 }
 
-const scraperNames: ScraperName[] = ['myfxbook', 'oanda', 'dukascopy', 'forexfactory', 'forexcom'];
+// Note: forexcom disabled due to Cloudflare protection blocking scraper
+const scraperNames: ScraperName[] = ['myfxbook', 'oanda', 'dukascopy', 'forexfactory'];
 
 // Run a single scraper with rate limiting and caching
 export async function runScraper(name: ScraperName): Promise<ScraperResult> {
