@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import HomepageLogin from './HomepageLogin';
 import AccessRequestModal from './AccessRequestModal';
 
@@ -57,7 +56,7 @@ function FloatingItem({ pair, type, size, position, delay }: FloatingItemProps) 
 
   const isBullish = type === 'bullish';
   const arrows = isBullish ? '↗↗↗' : '↘↘↘';
-  const colorClass = isBullish ? 'text-accent-cyan' : 'text-sentiment-bearish';
+  const colorClass = isBullish ? 'text-sentiment-bullish' : 'text-sentiment-bearish';
 
   return (
     <div
@@ -108,13 +107,11 @@ export default function LoginPageContent() {
           <div className="bg-surface-primary/90 backdrop-blur-xl border border-border-primary/50 rounded-2xl p-8 shadow-2xl shadow-black/50">
             {/* Logo */}
             <div className="text-center mb-8">
-              <div className="relative w-20 h-20 mx-auto mb-4">
-                <Image
+              <div className="w-20 h-20 mx-auto mb-4">
+                <img
                   src="/logo.png"
                   alt="Daghandelaren Logo"
-                  fill
-                  className="object-contain"
-                  priority
+                  className="w-full h-full object-contain"
                 />
               </div>
               <h1 className="text-3xl font-bold text-text-primary tracking-tight">
@@ -141,11 +138,6 @@ export default function LoginPageContent() {
               </p>
             </div>
           </div>
-
-          {/* Footer */}
-          <p className="text-center text-text-muted/60 text-xs mt-6 tracking-wide">
-            Professional forex sentiment analysis
-          </p>
         </div>
       </div>
 
