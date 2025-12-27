@@ -366,11 +366,11 @@ export async function getHistoricalSentiment(
     // Create time bucket key based on interval
     let timeKey: string;
     if (interval === 'hourly') {
-      // Format: YYYY-MM-DDTHH:00 (truncate to hour)
-      timeKey = snapshot.timestamp.toISOString().slice(0, 13) + ':00';
+      // Format: YYYY-MM-DDTHH:00:00.000Z (truncate to hour, explicit UTC)
+      timeKey = snapshot.timestamp.toISOString().slice(0, 13) + ':00:00.000Z';
     } else {
-      // Format: YYYY-MM-DD (truncate to day)
-      timeKey = snapshot.timestamp.toISOString().split('T')[0];
+      // Format: YYYY-MM-DDT00:00:00.000Z (truncate to day, explicit UTC)
+      timeKey = snapshot.timestamp.toISOString().split('T')[0] + 'T00:00:00.000Z';
     }
 
     if (!groupedData.has(timeKey)) {
