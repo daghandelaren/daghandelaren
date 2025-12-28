@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -16,6 +17,20 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ onSearch, view = 'overview', onViewChange }: DashboardHeaderProps) {
   const { data: session } = useSession();
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+  const viewDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
+        setIsViewDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const isAdmin = session?.user?.role === 'ADMIN';
 
   const handleSearch = (query: string) => {
@@ -48,7 +63,48 @@ export default function DashboardHeader({ onSearch, view = 'overview', onViewCha
             </span>
           </Link>
 
-          {/* View Tabs - Segmented Control */}
+          {/* Mobile View Dropdown */}
+          {onViewChange && (
+            <div className="relative sm:hidden" ref={viewDropdownRef}>
+              <button
+                onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-2 bg-surface-secondary/80 rounded-lg border border-border-primary/30 text-sm font-medium text-text-primary"
+              >
+                <span className="capitalize">{view}</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${isViewDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isViewDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-background-secondary border border-border-primary rounded-lg shadow-lg overflow-hidden z-50 min-w-[120px]">
+                  {(['overview', 'table', 'history'] as ViewType[]).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        onViewChange(tab);
+                        setIsViewDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-sm font-medium text-left capitalize transition-colors ${
+                        view === tab
+                          ? 'bg-accent-blue/20 text-accent-blue'
+                          : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* View Tabs - Desktop Segmented Control */}
           {onViewChange && (
             <div className="hidden sm:flex bg-surface-secondary/80 rounded-lg p-0.5 border border-border-primary/30">
               {(['overview', 'table', 'history'] as ViewType[]).map((tab) => (
