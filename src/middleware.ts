@@ -1,46 +1,33 @@
-import { withAuth } from 'next-auth/middleware';
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const pathname = req.nextUrl.pathname;
+export async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
 
-    // Admin routes - require ADMIN role
-    if (pathname.startsWith('/admin')) {
-      if (token?.role !== 'ADMIN') {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
-    }
-
+  // Public routes - always accessible
+  if (pathname === '/' || pathname.startsWith('/api/auth') || pathname === '/api/access-request') {
     return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const pathname = req.nextUrl.pathname;
-
-        // Public routes - always accessible
-        if (pathname === '/') {
-          return true;
-        }
-
-        // API auth routes - always accessible
-        if (pathname.startsWith('/api/auth')) {
-          return true;
-        }
-
-        // Access request API - public
-        if (pathname === '/api/access-request') {
-          return true;
-        }
-
-        // All other routes require authentication
-        return !!token;
-      },
-    },
   }
-);
+
+  // Get the token
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  // If no token, redirect to home page (login)
+  if (!token) {
+    // Redirect to home without callbackUrl to keep it clean
+    return NextResponse.redirect(new URL('/', req.url));
+  }
+
+  // Admin routes - require ADMIN role
+  if (pathname.startsWith('/admin')) {
+    if (token.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
