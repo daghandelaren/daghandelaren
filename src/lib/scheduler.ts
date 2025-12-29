@@ -169,7 +169,7 @@ async function shouldRunFundamentalNow(): Promise<boolean> {
     const todayStart = new Date(now);
     todayStart.setUTCHours(0, 0, 0, 0);
 
-    const recentUpdate = await prisma.fundamentalCurrencyData.findFirst({
+    const recentUpdate = await prisma.fundamentalCurrency.findFirst({
       where: {
         updatedAt: {
           gte: todayStart,
