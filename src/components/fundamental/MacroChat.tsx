@@ -149,7 +149,7 @@ export default function MacroChat({ aiConfigured }: MacroChatProps) {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-text-muted">
             <p className="mb-2">AI not configured</p>
-            <p className="text-xs">Add ANTHROPIC_API_KEY to enable chat</p>
+            <p className="text-xs">Add GEMINI_API_KEY to enable chat</p>
           </div>
         </div>
       </div>
