@@ -152,7 +152,60 @@ function getMillisecondsUntilScheduledTime(): number {
   return scheduled.getTime() - now.getTime();
 }
 
-export function startScheduler() {
+/**
+ * Check if fundamental analysis should run now (missed today's 18:00 UTC)
+ */
+async function shouldRunFundamentalNow(): Promise<boolean> {
+  const now = new Date();
+  const currentHourUTC = now.getUTCHours();
+
+  // Only check if it's after 18:00 UTC
+  if (currentHourUTC < SCHEDULED_HOUR) {
+    return false;
+  }
+
+  try {
+    // Check if we have fundamental data updated today
+    const todayStart = new Date(now);
+    todayStart.setUTCHours(0, 0, 0, 0);
+
+    const recentUpdate = await prisma.fundamentalCurrencyData.findFirst({
+      where: {
+        updatedAt: {
+          gte: todayStart,
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    // If no update today, run now
+    if (!recentUpdate) {
+      logger.info('[Scheduler] No fundamental data update today - running now');
+      return true;
+    }
+
+    // Check if the update was before 18:00 UTC today (meaning it was from yesterday's run or earlier)
+    const lastUpdateHourUTC = recentUpdate.updatedAt.getUTCHours();
+    const lastUpdateDate = recentUpdate.updatedAt.toISOString().split('T')[0];
+    const todayDate = now.toISOString().split('T')[0];
+
+    if (lastUpdateDate === todayDate && lastUpdateHourUTC >= SCHEDULED_HOUR) {
+      logger.info('[Scheduler] Fundamental analysis already ran today');
+      return false;
+    }
+
+    logger.info('[Scheduler] Fundamental data is stale - running now');
+    return true;
+  } catch (error) {
+    logger.error('[Scheduler] Error checking fundamental status:', error);
+    // Run anyway if we can't check
+    return true;
+  }
+}
+
+export async function startScheduler() {
   if (isSchedulerRunning) {
     logger.info('[Scheduler] Already running, skipping');
     return;
@@ -177,6 +230,16 @@ export function startScheduler() {
   setInterval(() => {
     runSentimentScrapers();
   }, ONE_HOUR);
+
+  // Check if we missed today's fundamental analysis
+  const shouldRunNow = await shouldRunFundamentalNow();
+  if (shouldRunNow) {
+    // Run fundamental analysis now since we missed the 18:00 UTC slot
+    setTimeout(() => {
+      logger.info('[Scheduler] Running missed fundamental analysis');
+      runFundamentalAnalysis();
+    }, 15000); // 15 second delay after startup
+  }
 
   // Schedule fundamental analysis at 18:00 UTC
   setTimeout(() => {
