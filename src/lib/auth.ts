@@ -56,6 +56,21 @@ export const authOptions: NextAuthOptions = {
     signIn: '/',
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Allow redirects to daghandelaren.nl (with or without www)
+      if (url.startsWith('https://daghandelaren.nl') || url.startsWith('https://www.daghandelaren.nl')) {
+        return url;
+      }
+      // Allow relative URLs
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // Allow same origin
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      return baseUrl;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

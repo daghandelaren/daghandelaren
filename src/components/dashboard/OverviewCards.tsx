@@ -7,10 +7,9 @@ import FadingSignalsCard from './cards/FadingSignalsCard';
 interface OverviewCardsProps {
   data: NewOverviewData | null;
   loading?: boolean;
-  onSymbolClick?: (symbol: string) => void;
 }
 
-export default function OverviewCards({ data, loading, onSymbolClick }: OverviewCardsProps) {
+export default function OverviewCards({ data, loading }: OverviewCardsProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -34,8 +33,8 @@ export default function OverviewCards({ data, loading, onSymbolClick }: Overview
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <NewSignalsCard signals={data.newSignals} onSymbolClick={onSymbolClick} />
-      <FadingSignalsCard signals={data.fadingSignals} onSymbolClick={onSymbolClick} />
+      <NewSignalsCard signals={data.newSignals} />
+      <FadingSignalsCard signals={data.fadingSignals} />
     </div>
   );
 }

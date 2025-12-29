@@ -23,24 +23,33 @@ interface HistoryDataPoint {
 interface SentimentHistoryProps {
   instruments: { symbol: string }[];
   loading?: boolean;
+  initialSymbol?: string;
 }
 
 type Timeframe = 'hourly' | 'daily';
 
-export default function SentimentHistory({ instruments, loading }: SentimentHistoryProps) {
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('');
+export default function SentimentHistory({ instruments, loading, initialSymbol }: SentimentHistoryProps) {
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(initialSymbol || '');
   const [historyData, setHistoryData] = useState<HistoryDataPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [timeframe, setTimeframe] = useState<Timeframe>('daily');
 
-  // Set default symbol when instruments load
+  // Set default symbol when instruments load (only if no initialSymbol)
   useEffect(() => {
     if (instruments.length > 0 && !selectedSymbol) {
+      // If initialSymbol is provided and exists in instruments, use it
+      if (initialSymbol) {
+        const found = instruments.find((i) => i.symbol === initialSymbol);
+        if (found) {
+          setSelectedSymbol(found.symbol);
+          return;
+        }
+      }
       // Try to find EUR/USD first, otherwise use first instrument
       const eurUsd = instruments.find((i) => i.symbol === 'EUR/USD');
       setSelectedSymbol(eurUsd?.symbol || instruments[0].symbol);
     }
-  }, [instruments, selectedSymbol]);
+  }, [instruments, selectedSymbol, initialSymbol]);
 
   // Fetch history when symbol or timeframe changes
   useEffect(() => {

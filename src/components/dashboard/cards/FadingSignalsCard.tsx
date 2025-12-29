@@ -1,13 +1,14 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { SignalChange } from '@/types';
 
 interface FadingSignalsCardProps {
   signals: SignalChange[];
-  onSymbolClick?: (symbol: string) => void;
 }
 
-export default function FadingSignalsCard({ signals, onSymbolClick }: FadingSignalsCardProps) {
+export default function FadingSignalsCard({ signals }: FadingSignalsCardProps) {
+  const router = useRouter();
   if (signals.length === 0) {
     return (
       <div className="bg-background-secondary rounded-lg p-4 h-full">
@@ -49,7 +50,7 @@ export default function FadingSignalsCard({ signals, onSymbolClick }: FadingSign
           return (
             <button
               key={signal.symbol}
-              onClick={() => onSymbolClick?.(signal.symbol)}
+              onClick={() => router.push(`/sentiment/history?symbol=${encodeURIComponent(signal.symbol)}`)}
               className="w-full flex items-center justify-between p-2 rounded-md bg-surface-secondary/30 hover:bg-surface-secondary/50 transition-all duration-200 group"
               style={{ animationDelay: `${index * 100}ms` }}
             >

@@ -93,7 +93,6 @@ export default function DashboardPage() {
           <OverviewCards
             data={newOverview}
             loading={loading}
-            onSymbolClick={(symbol) => setSearch(symbol)}
           />
         </div>
 

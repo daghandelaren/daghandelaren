@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import MegaMenu from '@/components/layout/MegaMenu';
 import SentimentHistory from '@/components/dashboard/SentimentHistory';
 
@@ -11,8 +12,12 @@ interface Instrument {
 
 export default function SentimentHistoryPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Get symbol from URL params (e.g., /sentiment/history?symbol=EUR/USD)
+  const initialSymbol = searchParams.get('symbol') || undefined;
 
   useEffect(() => {
     const fetchInstruments = async () => {
@@ -47,7 +52,7 @@ export default function SentimentHistoryPage() {
           </p>
         </div>
 
-        <SentimentHistory instruments={instruments} loading={loading} />
+        <SentimentHistory instruments={instruments} loading={loading} initialSymbol={initialSymbol} />
       </main>
     </div>
   );
