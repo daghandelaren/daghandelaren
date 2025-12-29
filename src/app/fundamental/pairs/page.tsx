@@ -41,13 +41,6 @@ export default function PairBiasesPage() {
       <MegaMenu userEmail={session?.user?.email || ''} isAdmin={isAdmin} />
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">Pair Biases</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            Directional bias for currency pairs based on fundamental analysis
-          </p>
-        </div>
-
         {loading ? (
           <div className="card p-6 animate-pulse">
             <div className="h-8 bg-surface-secondary rounded w-48 mb-4" />

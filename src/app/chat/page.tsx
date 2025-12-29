@@ -155,28 +155,22 @@ export default function ChatPage() {
       />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Macro Chat</h1>
-            <p className="text-text-secondary text-sm mt-1">
-              Ask questions about macroeconomics and FX markets
-            </p>
-          </div>
-          {messages.length > 0 && (
+        {messages.length > 0 && (
+          <div className="flex justify-end mb-4">
             <button
               onClick={clearHistory}
               className="text-sm text-text-muted hover:text-text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-surface-hover"
             >
               Clear history
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {!aiConfigured ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-text-muted">
               <p className="mb-2 text-lg">AI not configured</p>
-              <p className="text-sm">Add ANTHROPIC_API_KEY to enable chat</p>
+              <p className="text-sm">Add GEMINI_API_KEY to enable chat</p>
             </div>
           </div>
         ) : (

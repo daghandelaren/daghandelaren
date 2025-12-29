@@ -45,13 +45,6 @@ export default function SentimentHistoryPage() {
       />
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">Sentiment History</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            Historical sentiment charts for each instrument
-          </p>
-        </div>
-
         <SentimentHistory instruments={instruments} loading={loading} initialSymbol={initialSymbol} />
       </main>
     </div>

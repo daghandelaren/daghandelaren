@@ -90,13 +90,6 @@ export default function SentimentTablePage() {
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">Sentiment Table</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            Full sentiment data across all instruments
-          </p>
-        </div>
-
-        <div className="mb-6">
           <FilterBar
             onSearchChange={setSearch}
             onSourceChange={setSource}
