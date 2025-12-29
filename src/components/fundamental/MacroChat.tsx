@@ -181,7 +181,7 @@ export default function MacroChat({ aiConfigured }: MacroChatProps) {
           <div className="flex items-center justify-center h-full text-text-muted text-sm">
             <div className="text-center">
               <p>Ask questions about macro or FX markets</p>
-              <p className="text-xs mt-1">e.g., "What's the outlook for EUR/USD?"</p>
+              <p className="text-xs mt-1">e.g., &quot;What&apos;s the outlook for EUR/USD?&quot;</p>
             </div>
           </div>
         ) : (
