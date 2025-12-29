@@ -68,10 +68,10 @@ export default function FadingSignalsCard({ signals, onSymbolClick }: FadingSign
               <div className="flex items-center gap-2">
                 {/* Strength change */}
                 <div className="flex items-center gap-1 text-xs font-mono">
-                  <span className="text-text-muted">{signal.previousStrength}pp</span>
+                  <span className="text-text-muted">{signal.previousStrength.toFixed(2)}pp</span>
                   <span className="text-text-muted/50">→</span>
                   <span className={wasNeutralized ? 'text-gray-400' : 'text-orange-400'}>
-                    {signal.currentStrength}pp
+                    {signal.currentStrength.toFixed(2)}pp
                   </span>
                 </div>
 
@@ -82,7 +82,7 @@ export default function FadingSignalsCard({ signals, onSymbolClick }: FadingSign
                   </span>
                 ) : (
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-orange-400/20 text-orange-400">
-                    -{strengthDrop}pp
+                    -{strengthDrop.toFixed(2)}pp
                   </span>
                 )}
               </div>

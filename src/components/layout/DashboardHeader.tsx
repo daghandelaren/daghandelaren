@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react';
 import SearchBox from '@/components/ui/SearchBox';
 import UserDropdown from '@/components/layout/UserDropdown';
 
-type ViewType = 'overview' | 'table' | 'history';
+type ViewType = 'overview' | 'table' | 'history' | 'fundamental';
 
 interface DashboardHeaderProps {
   onSearch?: (query: string) => void;
@@ -82,8 +82,8 @@ export default function DashboardHeader({ onSearch, view = 'overview', onViewCha
               </button>
 
               {isViewDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 bg-background-secondary border border-border-primary rounded-lg shadow-lg overflow-hidden z-50 min-w-[120px]">
-                  {(['overview', 'table', 'history'] as ViewType[]).map((tab) => (
+                <div className="absolute top-full left-0 mt-1 bg-background-secondary border border-border-primary rounded-lg shadow-lg overflow-hidden z-50 min-w-[140px]">
+                  {(['overview', 'table', 'history', 'fundamental'] as ViewType[]).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => {
@@ -107,7 +107,7 @@ export default function DashboardHeader({ onSearch, view = 'overview', onViewCha
           {/* View Tabs - Desktop Segmented Control */}
           {onViewChange && (
             <div className="hidden sm:flex bg-surface-secondary/80 rounded-lg p-0.5 border border-border-primary/30">
-              {(['overview', 'table', 'history'] as ViewType[]).map((tab) => (
+              {(['overview', 'table', 'history', 'fundamental'] as ViewType[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => onViewChange(tab)}

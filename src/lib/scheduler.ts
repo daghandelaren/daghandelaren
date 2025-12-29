@@ -1,8 +1,14 @@
 import { logger } from './utils';
 import { prisma } from './prisma';
 
-const ONE_HOUR = 60 * 60 * 1000;
+const ONE_MINUTE = 60 * 1000;
+const ONE_HOUR = 60 * ONE_MINUTE;
 const TWELVE_HOURS = 12 * ONE_HOUR;
+const ONE_DAY = 24 * ONE_HOUR;
+
+// Schedule time for fundamental analysis: 18:00 UTC
+const SCHEDULED_HOUR = 18;
+const SCHEDULED_MINUTE = 0;
 
 let isSchedulerRunning = false;
 
@@ -20,11 +26,13 @@ async function cleanupOldLogs() {
   }
 }
 
-async function runScrapeJob() {
+/**
+ * Run sentiment scrapers (hourly)
+ */
+async function runSentimentScrapers() {
   try {
-    logger.info('[Scheduler] Starting hourly scrape job');
+    logger.info('[Scheduler] Starting hourly sentiment scrape');
 
-    // Dynamic import to avoid bundling issues
     const { runAllScrapers } = await import('@/scrapers');
     const { cleanupOldSnapshots } = await import('@/services/sentiment.service');
 
@@ -63,8 +71,85 @@ async function runScrapeJob() {
     // Cleanup old logs
     await cleanupOldLogs();
   } catch (error) {
-    logger.error('[Scheduler] Scrape job failed:', error);
+    logger.error('[Scheduler] Sentiment scrape failed:', error);
   }
+}
+
+/**
+ * Run fundamental analysis (daily at 18:00 UTC)
+ * - Trading Economics CPI/PMI data
+ * - AI analysis with Gemini
+ */
+async function runFundamentalAnalysis() {
+  logger.info('[Scheduler] Running daily fundamental analysis (18:00 UTC)');
+
+  try {
+    // 1. Update economic data from Trading Economics (Core CPI)
+    try {
+      const { updateEconomicData } = await import('@/services/economic-data.service');
+      const econResult = await updateEconomicData();
+      logger.info(`[Scheduler] Economic data update: ${econResult.updated} currencies updated`);
+    } catch (error) {
+      logger.error('[Scheduler] Economic data update failed:', error);
+    }
+
+    // 2. Update PMI data from Trading Economics (Services PMI)
+    try {
+      const { updatePmiData } = await import('@/services/pmi-data.service');
+      const pmiResult = await updatePmiData();
+      logger.info(`[Scheduler] PMI data update: ${pmiResult.updated} currencies updated`);
+    } catch (error) {
+      logger.error('[Scheduler] PMI data update failed:', error);
+    }
+
+    // 3. Run AI analysis with Gemini (if configured)
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { analyzeMarket } = await import('@/services/ai.service');
+        const aiResult = await analyzeMarket();
+
+        if (aiResult.success) {
+          logger.info('[Scheduler] AI analysis completed successfully');
+        } else {
+          logger.error('[Scheduler] AI analysis failed:', aiResult.error);
+        }
+      } catch (error) {
+        logger.error('[Scheduler] AI analysis error:', error);
+      }
+    } else {
+      logger.info('[Scheduler] Skipping AI analysis - GEMINI_API_KEY not configured');
+    }
+
+    // 4. Recalculate scores for all currencies
+    try {
+      const { recalculateAllScores } = await import('@/services/fundamental.service');
+      await recalculateAllScores();
+      logger.info('[Scheduler] Currency scores recalculated');
+    } catch (error) {
+      logger.error('[Scheduler] Score recalculation failed:', error);
+    }
+
+    logger.info('[Scheduler] Fundamental analysis completed');
+  } catch (error) {
+    logger.error('[Scheduler] Fundamental analysis error:', error);
+  }
+}
+
+/**
+ * Calculate milliseconds until next scheduled time (18:00 UTC)
+ */
+function getMillisecondsUntilScheduledTime(): number {
+  const now = new Date();
+  const scheduled = new Date(now);
+
+  scheduled.setUTCHours(SCHEDULED_HOUR, SCHEDULED_MINUTE, 0, 0);
+
+  // If scheduled time has passed today, schedule for tomorrow
+  if (scheduled.getTime() <= now.getTime()) {
+    scheduled.setUTCDate(scheduled.getUTCDate() + 1);
+  }
+
+  return scheduled.getTime() - now.getTime();
 }
 
 export function startScheduler() {
@@ -74,18 +159,34 @@ export function startScheduler() {
   }
 
   isSchedulerRunning = true;
-  logger.info('[Scheduler] Starting hourly scraper scheduler');
 
-  // Run immediately on startup (with a small delay to let the app initialize)
+  const msUntilFundamental = getMillisecondsUntilScheduledTime();
+  const hoursUntilFundamental = Math.round(msUntilFundamental / ONE_HOUR * 10) / 10;
+
+  logger.info(`[Scheduler] Starting scheduler`);
+  logger.info(`[Scheduler] - Sentiment scrapers: every hour`);
+  logger.info(`[Scheduler] - Fundamental analysis: daily at 18:00 UTC (in ${hoursUntilFundamental} hours)`);
+
+  // Run sentiment scrapers immediately on startup (with a small delay)
   setTimeout(() => {
-    logger.info('[Scheduler] Running initial scrape');
-    runScrapeJob();
+    logger.info('[Scheduler] Running initial sentiment scrape on startup');
+    runSentimentScrapers();
   }, 10000); // 10 second delay after startup
 
-  // Then run every hour
+  // Schedule sentiment scrapers to run every hour
   setInterval(() => {
-    runScrapeJob();
+    runSentimentScrapers();
   }, ONE_HOUR);
 
-  logger.info('[Scheduler] Scheduler started - will scrape every hour');
+  // Schedule fundamental analysis at 18:00 UTC
+  setTimeout(() => {
+    runFundamentalAnalysis();
+
+    // Then run every 24 hours
+    setInterval(() => {
+      runFundamentalAnalysis();
+    }, ONE_DAY);
+  }, msUntilFundamental);
+
+  logger.info('[Scheduler] Scheduler started');
 }

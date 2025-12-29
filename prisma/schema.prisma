@@ -89,3 +89,75 @@ model SentimentSnapshot {
   @@index([instrumentId, sourceId, timestamp])
   @@index([timestamp])
 }
+
+// ============================================
+// FUNDAMENTAL ANALYSIS MODELS
+// ============================================
+
+// Currency fundamental data (AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD)
+model FundamentalCurrency {
+  id                String   @id @default(cuid())
+  currency          String   @unique // AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD
+
+  // Indicators (each maps to +1/0/-1)
+  inflationTrend    String   @default("Flat")    // Rising/Flat/Falling
+  pmiSignal         String   @default("Flat")    // Positive/Flat/Negative
+  centralBankTone   String   @default("Neutral") // Hawkish/Neutral/Dovish
+  rateDifferential  String   @default("Flat")    // Positive/Flat/Negative
+  creditConditions  String   @default("Neutral") // Easing/Neutral/Tightening
+  commodityTailwind String   @default("Neutral") // Yes/Neutral/No
+  // Note: Risk sentiment is GLOBAL (Risk-on/Risk-off/Neutral) stored in FundamentalSettings.riskRegime
+
+  // Calculated scores
+  baseScore         Int      @default(0)
+  commodityAdj      Int      @default(0)
+  riskAdj           Int      @default(0)
+  totalScore        Int      @default(0)
+  rating            String   @default("Neutral") // Bullish/Neutral/Bearish
+
+  // Economic data actual values
+  cpiActual         Float?   // Current CPI value (e.g., 3.2)
+  cpiPrevious       Float?   // Previous CPI value (e.g., 2.9)
+  pmiActual         Float?   // Current PMI value (e.g., 52.4)
+  pmiPrevious       Float?   // Previous PMI value (e.g., 51.8)
+
+  // AI metadata
+  aiJustification   String?  @db.Text // AI's reasoning
+  manualOverride    Boolean  @default(false)
+  lastUpdated       DateTime @default(now())
+  updatedBy         String?  // "AI" or admin email
+
+  @@index([currency])
+}
+
+// Global fundamental settings
+model FundamentalSettings {
+  id                         String   @id @default(cuid())
+  bullishThreshold           Int      @default(3)  // Score >= this = Bullish
+  bearishThreshold           Int      @default(-3) // Score <= this = Bearish
+  riskRegime                 String   @default("Neutral") // Risk-on/Neutral/Risk-off
+  riskSentimentJustification String?  @db.Text // AI's reasoning for risk sentiment
+  lastUpdated                DateTime @default(now())
+}
+
+// Historical snapshots for tracking changes
+model FundamentalHistory {
+  id        String   @id @default(cuid())
+  currency  String
+  snapshot  Json     // Full currency data at that point
+  source    String   // "AI" or admin email
+  createdAt DateTime @default(now())
+
+  @@index([currency, createdAt])
+}
+
+// AI chat messages for macro Q&A
+model AIChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // "user" or "assistant"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

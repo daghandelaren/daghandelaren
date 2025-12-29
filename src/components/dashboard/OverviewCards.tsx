@@ -1,8 +1,6 @@
 'use client';
 
 import type { NewOverviewData } from '@/types';
-import CurrencyStrengthCard from './cards/CurrencyStrengthCard';
-import RiskSentimentCard from './cards/RiskSentimentCard';
 import NewSignalsCard from './cards/NewSignalsCard';
 import FadingSignalsCard from './cards/FadingSignalsCard';
 
@@ -15,8 +13,8 @@ interface OverviewCardsProps {
 export default function OverviewCards({ data, loading, onSymbolClick }: OverviewCardsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[...Array(2)].map((_, i) => (
           <div key={i} className="bg-background-secondary rounded-lg p-4 animate-pulse">
             <div className="h-4 w-24 bg-surface-secondary rounded mb-3" />
             <div className="space-y-2">
@@ -35,9 +33,7 @@ export default function OverviewCards({ data, loading, onSymbolClick }: Overview
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <CurrencyStrengthCard data={data.currencyStrength} />
-      <RiskSentimentCard data={data.riskSentiment} />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <NewSignalsCard signals={data.newSignals} onSymbolClick={onSymbolClick} />
       <FadingSignalsCard signals={data.fadingSignals} onSymbolClick={onSymbolClick} />
     </div>

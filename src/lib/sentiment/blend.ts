@@ -102,7 +102,7 @@ export function computeWeightedBlend(sources: BlendInput): BlendedResult {
     weightsUsed.F = WEIGHTS.forexfactory;
   }
 
-  // Process Forex.com
+  // Process FXBlue
   if (sources.fxblue && isValidSnapshot(sources.fxblue)) {
     weightedSum += WEIGHTS.fxblue * sources.fxblue.longPercent;
     totalWeight += WEIGHTS.fxblue;

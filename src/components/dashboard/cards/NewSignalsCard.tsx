@@ -19,7 +19,7 @@ export default function NewSignalsCard({ signals, onSymbolClick }: NewSignalsCar
         </div>
         <div className="flex flex-col items-center justify-center h-32 text-text-muted">
           <div className="text-2xl mb-2 opacity-30">📡</div>
-          <p className="text-xs text-center">No new signals in the last 24 hours</p>
+          <p className="text-xs text-center">No new signals in the last 48 hours</p>
         </div>
       </div>
     );
@@ -75,7 +75,7 @@ export default function NewSignalsCard({ signals, onSymbolClick }: NewSignalsCar
                     ? 'bg-sentiment-bullish/20 text-sentiment-bullish'
                     : 'bg-sentiment-bearish/20 text-sentiment-bearish'
                 }`}>
-                  {signal.currentStrength}pp
+                  {signal.currentStrength.toFixed(2)}pp
                 </span>
 
                 {/* Label badge */}
@@ -94,7 +94,7 @@ export default function NewSignalsCard({ signals, onSymbolClick }: NewSignalsCar
 
       {/* Footer hint */}
       <p className="text-[10px] text-text-muted/50 text-center mt-3">
-        Crossed 60/40 in last 24h
+        Crossed 60/40 in last 48h
       </p>
     </div>
   );

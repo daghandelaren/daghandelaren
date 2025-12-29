@@ -485,11 +485,11 @@ export async function getSignalChanges(currentData: AggregatedSentiment[]): Prom
   const newSignals: SignalChange[] = [];
   const fadingSignals: SignalChange[] = [];
 
-  // Get data from 24 hours ago for comparison
-  const comparisonTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Get data from 48 hours ago for comparison
+  const comparisonTime = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   for (const current of currentData) {
-    // Get historical snapshots for this instrument around 24 hours ago
+    // Get historical snapshots for this instrument around 48 hours ago
     const historicalSnapshots = await prisma.sentimentSnapshot.findMany({
       where: {
         instrumentId: current.instrument.id,

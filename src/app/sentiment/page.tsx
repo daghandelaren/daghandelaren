@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import MegaMenu from '@/components/layout/MegaMenu';
-import OverviewCards from '@/components/dashboard/OverviewCards';
-import SentimentOverview from '@/components/dashboard/SentimentOverview';
+import FilterBar from '@/components/dashboard/FilterBar';
+import SentimentTable from '@/components/dashboard/SentimentTable';
 
 interface SentimentItem {
   id: string;
@@ -29,11 +29,8 @@ interface SentimentItem {
   lastUpdated: string;
 }
 
-import type { NewOverviewData } from '@/types';
-
 interface SentimentResponse {
   data: SentimentItem[];
-  newOverview?: NewOverviewData;
   meta: {
     total: number;
     sources: string[];
@@ -41,32 +38,35 @@ interface SentimentResponse {
   };
 }
 
-export default function DashboardPage() {
+export default function SentimentTablePage() {
   const { data: session } = useSession();
   const [data, setData] = useState<SentimentItem[]>([]);
-  const [newOverview, setNewOverview] = useState<NewOverviewData | null>(null);
   const [sources, setSources] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters
   const [search, setSearch] = useState('');
+  const [source, setSource] = useState('');
+  const [assetClass, setAssetClass] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      params.set('newOverview', 'true');
+      if (source) params.set('source', source);
+      if (assetClass) params.set('assetClass', assetClass);
 
       const response = await fetch(`/api/sentiment?${params.toString()}`);
       const json: SentimentResponse = await response.json();
 
       setData(json.data);
-      setNewOverview(json.newOverview ?? null);
       setSources(json.meta.sources);
     } catch (error) {
       console.error('Failed to fetch sentiment data:', error);
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, source, assetClass]);
 
   useEffect(() => {
     fetchData();
@@ -90,28 +90,26 @@ export default function DashboardPage() {
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
         <div className="mb-6">
-          <OverviewCards
-            data={newOverview}
-            loading={loading}
-            onSymbolClick={(symbol) => setSearch(symbol)}
+          <h1 className="text-2xl font-bold text-text-primary">Sentiment Table</h1>
+          <p className="text-text-secondary text-sm mt-1">
+            Full sentiment data across all instruments
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <FilterBar
+            onSearchChange={setSearch}
+            onSourceChange={setSource}
+            onAssetClassChange={setAssetClass}
+            sources={sources}
           />
         </div>
 
-        <SentimentOverview
-          data={(data || []).map((item) => ({
-            ...item,
-            blendedLong: item.blendedLong,
-            blendedShort: item.blendedShort,
-          }))}
-          loading={loading}
-        />
+        <SentimentTable data={data || []} loading={loading} />
 
         <div className="mt-8 pt-6 border-t border-border-primary/50 text-center">
           <p className="text-text-muted text-xs">
             Data sources: {sources.length > 0 ? sources.join(' · ') : 'None available'}
-          </p>
-          <p className="text-text-muted/70 text-xs mt-1">
-            Weights: Myfxbook (2) · OANDA (2) · Dukascopy (1) · ForexFactory (1) · FXBlue (1)
           </p>
         </div>
       </main>

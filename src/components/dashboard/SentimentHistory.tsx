@@ -100,8 +100,9 @@ export default function SentimentHistory({ instruments, loading }: SentimentHist
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const shortPct = payload[0]?.value || 0;
-      const longPct = payload[1]?.value || 0;
+      // payload[0] = blendedLong (first bar), payload[1] = blendedShort (second bar)
+      const longPct = payload[0]?.value || 0;
+      const shortPct = payload[1]?.value || 0;
       const signal = computeContrarian(longPct, shortPct);
 
       return (

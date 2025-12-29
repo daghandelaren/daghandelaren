@@ -1,20 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import DashboardHeader from '@/components/layout/DashboardHeader';
+import { useSession } from 'next-auth/react';
+import MegaMenu from '@/components/layout/MegaMenu';
 import UserManagement from '@/components/admin/UserManagement';
 import ScraperControls from '@/components/admin/ScraperControls';
 import AccessRequests from '@/components/admin/AccessRequests';
 import ScraperLogs from '@/components/admin/ScraperLogs';
+import FundamentalsAdmin from '@/components/admin/FundamentalsAdmin';
 
-type Tab = 'users' | 'requests' | 'scrapers' | 'logs';
+type Tab = 'users' | 'requests' | 'scrapers' | 'logs' | 'fundamentals';
 
 export default function AdminPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>('users');
+
+  const isAdmin = session?.user?.role === 'ADMIN';
 
   return (
     <div className="min-h-screen bg-background-primary">
-      <DashboardHeader />
+      <MegaMenu userEmail={session?.user?.email || ''} isAdmin={isAdmin} />
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="mb-6">
@@ -67,6 +72,16 @@ export default function AdminPage() {
             >
               Scraper Logs
             </button>
+            <button
+              onClick={() => setActiveTab('fundamentals')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'fundamentals'
+                  ? 'bg-accent-blue text-white'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+              }`}
+            >
+              Fundamentals
+            </button>
           </div>
         </div>
 
@@ -75,6 +90,7 @@ export default function AdminPage() {
         {activeTab === 'requests' && <AccessRequests />}
         {activeTab === 'scrapers' && <ScraperControls />}
         {activeTab === 'logs' && <ScraperLogs />}
+        {activeTab === 'fundamentals' && <FundamentalsAdmin />}
       </main>
     </div>
   );
