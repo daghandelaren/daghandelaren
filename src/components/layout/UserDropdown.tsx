@@ -126,7 +126,7 @@ export default function UserDropdown({ email, isAdmin = false }: UserDropdownPro
           {/* Sign out section */}
           <div className="py-1 border-t border-border-primary">
             <button
-              onClick={() => signOut({ callbackUrl: 'https://daghandelaren.nl' })}
+              onClick={() => signOut({ callbackUrl: 'https://www.daghandelaren.nl' })}
               className="dropdown-item-danger flex items-center gap-2 w-full"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

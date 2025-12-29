@@ -49,6 +49,8 @@ export default function FundamentalsAdmin() {
   const [analyzing, setAnalyzing] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<CurrencyData>>({});
+  const [scrapingCpi, setScrapingCpi] = useState(false);
+  const [scrapingPmi, setScrapingPmi] = useState(false);
 
   // Fetch data
   const fetchData = async () => {
@@ -172,6 +174,52 @@ export default function FundamentalsAdmin() {
     }
   };
 
+  // Scrape CPI data from Trading Economics
+  const scrapeCpiData = async () => {
+    if (!confirm('Scrape CPI data from Trading Economics?')) return;
+
+    setScrapingCpi(true);
+    try {
+      const res = await fetch('/api/fundamental/economic-data', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success !== false) {
+        await fetchData();
+        alert(`CPI data updated: ${data.updated || 0} currencies`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('CPI scrape error:', error);
+      alert('Failed to scrape CPI data');
+    } finally {
+      setScrapingCpi(false);
+    }
+  };
+
+  // Scrape PMI data from Trading Economics
+  const scrapePmiData = async () => {
+    if (!confirm('Scrape PMI data from Trading Economics?')) return;
+
+    setScrapingPmi(true);
+    try {
+      const res = await fetch('/api/fundamental/pmi-data', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success !== false) {
+        await fetchData();
+        alert(`PMI data updated: ${data.updated || 0} currencies`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('PMI scrape error:', error);
+      alert('Failed to scrape PMI data');
+    } finally {
+      setScrapingPmi(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -266,6 +314,40 @@ export default function FundamentalsAdmin() {
             <p className="text-sm text-text-secondary">{settings.riskSentimentJustification}</p>
           </div>
         )}
+      </div>
+
+      {/* Trading Economics Data Controls */}
+      <div className="card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-text-primary">Trading Economics Data</h3>
+            <p className="text-sm text-text-muted mt-1">
+              Manually scrape CPI and PMI data from Trading Economics
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={scrapeCpiData}
+              disabled={scrapingCpi}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {scrapingCpi && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              )}
+              {scrapingCpi ? 'Scraping...' : 'Scrape CPI'}
+            </button>
+            <button
+              onClick={scrapePmiData}
+              disabled={scrapingPmi}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {scrapingPmi && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              )}
+              {scrapingPmi ? 'Scraping...' : 'Scrape PMI'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Currency Data Table */}

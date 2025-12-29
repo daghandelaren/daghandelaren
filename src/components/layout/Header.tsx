@@ -38,7 +38,7 @@ export default function Header() {
                   {session.user?.email}
                 </span>
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => signOut({ callbackUrl: 'https://www.daghandelaren.nl' })}
                   className="btn btn-secondary text-sm"
                 >
                   Sign Out

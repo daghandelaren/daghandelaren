@@ -249,6 +249,8 @@ export default function SentimentHistory({ instruments, loading }: SentimentHist
               />
               <YAxis
                 domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
+                allowDataOverflow={true}
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#2d3748' }}
                 tickLine={{ stroke: '#2d3748' }}
