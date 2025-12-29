@@ -172,7 +172,24 @@ async function generateWithFallback(prompt: string, useSearch: boolean = false):
 }
 
 /**
+ * Parse AI JSON response, handling markdown code blocks
+ */
+function parseAIResponse(text: string): AnalysisResult {
+  let jsonStr = text;
+  const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1];
+  }
+  const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (objectMatch) {
+    jsonStr = objectMatch[0];
+  }
+  return JSON.parse(jsonStr.trim());
+}
+
+/**
  * Run AI market analysis for all currencies using Gemini
+ * Uses a two-pass approach: initial analysis + confirmation
  */
 export async function analyzeMarket(): Promise<{
   success: boolean;
@@ -184,35 +201,63 @@ export async function analyzeMarket(): Promise<{
   }
 
   try {
-    const fullPrompt = MACRO_ANALYST_PROMPT + '\n\nAnalyze the current macro environment for all 8 major currencies and provide your assessment based on your latest knowledge.';
+    // FIRST PASS: Initial analysis
+    console.log('[AI] Starting first pass analysis...');
+    const firstPrompt = MACRO_ANALYST_PROMPT + '\n\nAnalyze the current macro environment for all 8 major currencies and provide your assessment based on your latest knowledge.';
 
-    // Generate with search grounding for real-time market data
-    const text = await generateWithFallback(fullPrompt, true);
+    const firstText = await generateWithFallback(firstPrompt, true);
 
-    // Parse JSON response
+    let firstResult: AnalysisResult;
+    try {
+      firstResult = parseAIResponse(firstText);
+    } catch {
+      console.error('Failed to parse first AI response:', firstText);
+      return { success: false, error: 'Failed to parse first AI response as JSON' };
+    }
+
+    // Validate first result
+    if (!firstResult.riskSentiment || !Array.isArray(firstResult.currencies) || firstResult.currencies.length !== 8) {
+      return { success: false, error: `Invalid first response format: expected 8 currencies, got ${firstResult.currencies?.length || 0}` };
+    }
+
+    console.log('[AI] First pass complete. Starting confirmation pass...');
+
+    // SECOND PASS: Confirmation - ask AI to review its own analysis
+    const confirmationPrompt = `You previously provided this FX macro analysis:
+
+${JSON.stringify(firstResult, null, 2)}
+
+Please review your analysis carefully. Are you confident in these assessments?
+
+Consider:
+- Is each central bank tone accurate based on recent communications?
+- Are the rate differentials correct relative to current policy rates?
+- Do the credit conditions reflect the actual lending environment?
+- Are commodity tailwinds/headwinds accurate for commodity-linked currencies (AUD, CAD, NZD)?
+
+If you want to make any changes, provide the corrected full JSON response.
+If you are confident the analysis is correct, return the same JSON response.
+
+Return ONLY the JSON object in the same format, no other text.`;
+
+    const confirmText = await generateWithFallback(confirmationPrompt, true);
+
     let result: AnalysisResult;
     try {
-      // Try to extract JSON from the response (handle markdown code blocks)
-      let jsonStr = text;
-      const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1];
-      }
-      // Find the object
-      const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (objectMatch) {
-        jsonStr = objectMatch[0];
-      }
-      result = JSON.parse(jsonStr.trim());
+      result = parseAIResponse(confirmText);
     } catch {
-      console.error('Failed to parse AI response:', text);
-      return { success: false, error: 'Failed to parse AI response as JSON' };
+      console.error('Failed to parse confirmation response, using first result:', confirmText);
+      // Fall back to first result if confirmation parsing fails
+      result = firstResult;
     }
 
-    // Validate result structure
+    // Validate final result
     if (!result.riskSentiment || !Array.isArray(result.currencies) || result.currencies.length !== 8) {
-      return { success: false, error: `Invalid response format: expected object with riskSentiment and 8 currencies, got ${result.currencies?.length || 0}` };
+      console.log('[AI] Confirmation result invalid, using first result');
+      result = firstResult;
     }
+
+    console.log('[AI] Confirmation pass complete.');
 
     // Update global risk regime and justification in settings
     const { updateSettings } = await import('./fundamental.service');
