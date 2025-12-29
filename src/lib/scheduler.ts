@@ -171,12 +171,12 @@ async function shouldRunFundamentalNow(): Promise<boolean> {
 
     const recentUpdate = await prisma.fundamentalCurrency.findFirst({
       where: {
-        updatedAt: {
+        lastUpdated: {
           gte: todayStart,
         },
       },
       orderBy: {
-        updatedAt: 'desc',
+        lastUpdated: 'desc',
       },
     });
 
@@ -187,8 +187,8 @@ async function shouldRunFundamentalNow(): Promise<boolean> {
     }
 
     // Check if the update was before 18:00 UTC today (meaning it was from yesterday's run or earlier)
-    const lastUpdateHourUTC = recentUpdate.updatedAt.getUTCHours();
-    const lastUpdateDate = recentUpdate.updatedAt.toISOString().split('T')[0];
+    const lastUpdateHourUTC = recentUpdate.lastUpdated.getUTCHours();
+    const lastUpdateDate = recentUpdate.lastUpdated.toISOString().split('T')[0];
     const todayDate = now.toISOString().split('T')[0];
 
     if (lastUpdateDate === todayDate && lastUpdateHourUTC >= SCHEDULED_HOUR) {
