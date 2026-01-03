@@ -42,16 +42,17 @@ export const FOREX_PAIRS = [
   { pair: 'CAD/CHF', base: 'CAD', quote: 'CHF' },
 ] as const;
 
-// Risk adjustments by currency
+// Risk adjustments by currency (small overlay, max ±0.5)
+// Risk is meaningful but never dominant over core factors
 const RISK_ADJUSTMENTS: Record<Currency, { riskOn: number; riskOff: number }> = {
-  AUD: { riskOn: 1, riskOff: -1 },
-  CAD: { riskOn: 1, riskOff: -1 },
-  CHF: { riskOn: -1, riskOff: 1 },
+  AUD: { riskOn: 0.5, riskOff: -0.5 },
+  CAD: { riskOn: 0.25, riskOff: -0.25 },  // Smaller due to oil correlation
+  CHF: { riskOn: -0.5, riskOff: 0.5 },
   EUR: { riskOn: 0, riskOff: 0 },
   GBP: { riskOn: 0, riskOff: 0 },
-  JPY: { riskOn: -1, riskOff: 1 },
-  NZD: { riskOn: 1, riskOff: -1 },
-  USD: { riskOn: -1, riskOff: 1 },
+  JPY: { riskOn: -0.5, riskOff: 0.5 },
+  NZD: { riskOn: 0.5, riskOff: -0.5 },
+  USD: { riskOn: -0.5, riskOff: 0.5 },
 };
 
 // Score mappings
@@ -59,11 +60,10 @@ type InflationTrend = 'Up' | 'Flat' | 'Down';
 type PMISignal = 'Up' | 'Flat' | 'Down';
 type CentralBankTone = 'Hawkish' | 'Neutral' | 'Dovish';
 type RateDifferential = 'Up' | 'Flat' | 'Down';
-type CreditConditions = 'Easing' | 'Neutral' | 'Tightening';
 type CommodityTailwind = 'Yes' | 'Neutral' | 'No';
 type RiskRegime = 'Risk-on' | 'Neutral' | 'Risk-off';
 
-// Score mappings
+// Score mappings - Note: rateDiff has 2x weight in baseScore calculation
 const SCORE_MAP = {
   // Inflation: Up = bullish (higher rates support currency)
   inflation: { Up: 1, Flat: 0, Down: -1 },
@@ -71,12 +71,19 @@ const SCORE_MAP = {
   pmi: { Up: 1, Flat: 0, Down: -1 },
   // Central Bank: Hawkish = bullish (higher rates)
   centralBank: { Hawkish: 1, Neutral: 0, Dovish: -1 },
-  // Rate Differential: Up = bullish (higher yield attracts capital)
-  rateDiff: { Up: 1, Flat: 0, Down: -1 },
-  // Credit: Easing = bullish (more money flowing)
-  credit: { Easing: 1, Neutral: 0, Tightening: -1 },
+  // Rate Differential (2Y Yield Diff): Positive = bullish (higher yield attracts capital)
+  // Note: Now rule-based using MA20 vs MA60 of yield differential
+  rateDiff: { Positive: 1, Flat: 0, Negative: -1, Up: 1, Down: -1 },
   // Commodity: Yes = bullish for commodity currencies
   commodity: { Yes: 1, Neutral: 0, No: -1 },
+} as const;
+
+// Weight multipliers for scoring
+const SCORE_WEIGHTS = {
+  inflation: 1,
+  pmi: 1,
+  centralBank: 1,
+  rateDiff: 2,  // 2x weight for yield differential
 } as const;
 
 export interface PairBias {
@@ -93,12 +100,20 @@ export interface CurrencyScore {
   pmiSignal: string;
   centralBankTone: string;
   rateDifferential: string;
-  creditConditions: string;
   commodityTailwind: string;
   cpiActual: number | null;
   cpiPrevious: number | null;
   pmiActual: number | null;
   pmiPrevious: number | null;
+  // New yield data fields
+  yield2Y: number | null;
+  yieldDiffVsUsd: number | null;
+  yieldDiffMa20: number | null;
+  yieldDiffMa60: number | null;
+  // Commodity basket data
+  commodityBasket: number | null;
+  commodityMa90: number | null;
+  // Scores
   baseScore: number;
   commodityAdj: number;
   riskAdj: number;
@@ -123,14 +138,14 @@ export function calculateScores(
   riskRegime: RiskRegime = 'Neutral',
   thresholds: { bullish: number; bearish: number } = { bullish: 3, bearish: -3 }
 ): { baseScore: number; commodityAdj: number; riskAdj: number; totalScore: number; rating: string } {
-  // Base score from 5 indicators
-  const inflationScore = SCORE_MAP.inflation[currency.inflationTrend as InflationTrend] ?? 0;
-  const pmiScore = SCORE_MAP.pmi[currency.pmiSignal as PMISignal] ?? 0;
-  const cbScore = SCORE_MAP.centralBank[currency.centralBankTone as CentralBankTone] ?? 0;
-  const rateScore = SCORE_MAP.rateDiff[currency.rateDifferential as RateDifferential] ?? 0;
-  const creditScore = SCORE_MAP.credit[currency.creditConditions as CreditConditions] ?? 0;
+  // Base score from 5 indicators with weights
+  // Yield differential (rateDiff) has 2x weight
+  const inflationScore = (SCORE_MAP.inflation[currency.inflationTrend as InflationTrend] ?? 0) * SCORE_WEIGHTS.inflation;
+  const pmiScore = (SCORE_MAP.pmi[currency.pmiSignal as PMISignal] ?? 0) * SCORE_WEIGHTS.pmi;
+  const cbScore = (SCORE_MAP.centralBank[currency.centralBankTone as CentralBankTone] ?? 0) * SCORE_WEIGHTS.centralBank;
+  const rateScore = (SCORE_MAP.rateDiff[currency.rateDifferential as keyof typeof SCORE_MAP.rateDiff] ?? 0) * SCORE_WEIGHTS.rateDiff;
 
-  const baseScore = inflationScore + pmiScore + cbScore + rateScore + creditScore;
+  const baseScore = inflationScore + pmiScore + cbScore + rateScore;
 
   // Commodity adjustment
   const commodityAdj = SCORE_MAP.commodity[currency.commodityTailwind as CommodityTailwind] ?? 0;
@@ -240,12 +255,19 @@ export async function getAllCurrencies(): Promise<CurrencyScore[]> {
       pmiSignal: c.pmiSignal,
       centralBankTone: c.centralBankTone,
       rateDifferential: c.rateDifferential,
-      creditConditions: c.creditConditions,
       commodityTailwind: c.commodityTailwind,
       cpiActual: c.cpiActual,
       cpiPrevious: c.cpiPrevious,
       pmiActual: c.pmiActual,
       pmiPrevious: c.pmiPrevious,
+      // New yield data fields
+      yield2Y: c.yield2Y,
+      yieldDiffVsUsd: c.yieldDiffVsUsd,
+      yieldDiffMa20: c.yieldDiffMa20,
+      yieldDiffMa60: c.yieldDiffMa60,
+      // Commodity basket data
+      commodityBasket: c.commodityBasket,
+      commodityMa90: c.commodityMa90,
       ...scores,
       aiJustification: c.aiJustification,
       manualOverride: c.manualOverride,
@@ -291,7 +313,6 @@ export async function updateCurrency(
     pmiSignal?: string;
     centralBankTone?: string;
     rateDifferential?: string;
-    creditConditions?: string;
     commodityTailwind?: string;
     aiJustification?: string;
     manualOverride?: boolean;
@@ -347,7 +368,6 @@ export async function bulkUpdateCurrencies(
     pmiSignal?: string;
     centralBankTone?: string;
     rateDifferential?: string;
-    creditConditions?: string;
     commodityTailwind?: string;
     aiJustification?: string;
   }>,

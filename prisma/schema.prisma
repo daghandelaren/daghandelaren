@@ -104,7 +104,6 @@ model FundamentalCurrency {
   pmiSignal         String   @default("Flat")    // Positive/Flat/Negative
   centralBankTone   String   @default("Neutral") // Hawkish/Neutral/Dovish
   rateDifferential  String   @default("Flat")    // Positive/Flat/Negative
-  creditConditions  String   @default("Neutral") // Easing/Neutral/Tightening
   commodityTailwind String   @default("Neutral") // Yes/Neutral/No
   // Note: Risk sentiment is GLOBAL (Risk-on/Risk-off/Neutral) stored in FundamentalSettings.riskRegime
 
@@ -120,6 +119,16 @@ model FundamentalCurrency {
   cpiPrevious       Float?   // Previous CPI value (e.g., 2.9)
   pmiActual         Float?   // Current PMI value (e.g., 52.4)
   pmiPrevious       Float?   // Previous PMI value (e.g., 51.8)
+
+  // Yield and market data
+  yield2Y           Float?   // Current 2Y yield
+  yieldDiffVsUsd    Float?   // Yield differential vs USD
+  yieldDiffMa20     Float?   // 20-day MA of yield differential
+  yieldDiffMa60     Float?   // 60-day MA of yield differential
+
+  // Commodity basket value (for AUD, CAD, NZD)
+  commodityBasket   Float?   // Current commodity basket value
+  commodityMa90     Float?   // 90-day MA of commodity basket
 
   // AI metadata
   aiJustification   String?  @db.Text // AI's reasoning
@@ -137,6 +146,12 @@ model FundamentalSettings {
   bearishThreshold           Int      @default(-3) // Score <= this = Bearish
   riskRegime                 String   @default("Neutral") // Risk-on/Neutral/Risk-off
   riskSentimentJustification String?  @db.Text // AI's reasoning for risk sentiment
+
+  // VIX-based risk calculation
+  vixCurrent                 Float?   // Current VIX value
+  vixMa90                    Float?   // 90-day MA of VIX
+  vixTrending                String?  // "rising", "falling", "flat"
+
   lastUpdated                DateTime @default(now())
 }
 
@@ -161,3 +176,44 @@ model AIChatMessage {
 
   @@index([userId, createdAt])
 }
+
+// ============================================
+// MARKET DATA TIME SERIES (for rule-based scoring)
+// ============================================
+
+// 2-Year bond yields for yield differential calculations
+model YieldData {
+  id        String   @id @default(cuid())
+  currency  String   // USD, EUR, GBP, JPY, CHF, AUD, NZD, CAD
+  yield2Y   Float    // 2-year government bond yield (%)
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([currency, date])
+  @@index([currency])
+  @@index([date])
+}
+
+// VIX data for risk sentiment calculation
+model VixData {
+  id        String   @id @default(cuid())
+  value     Float    // VIX close value
+  date      DateTime @unique @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+// Commodity prices for commodity tailwind calculations
+model CommodityData {
+  id        String   @id @default(cuid())
+  commodity String   // IRON_ORE, COPPER, OIL_WTI, DAIRY
+  price     Float    // Price in USD
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([commodity, date])
+  @@index([commodity])
+  @@index([date])
+}
+

@@ -8,7 +8,6 @@ interface CurrencyScoreCardProps {
   pmiSignal: string;
   centralBankTone: string;
   rateDifferential: string;
-  creditConditions: string;
   commodityTailwind: string;
   cpiActual?: number | null;
   cpiPrevious?: number | null;
@@ -19,6 +18,9 @@ interface CurrencyScoreCardProps {
   onClick?: () => void;
 }
 
+// Check if currency has commodity exposure
+const COMMODITY_CURRENCIES = ['AUD', 'CAD', 'NZD'];
+
 export default function CurrencyScoreCard({
   currency,
   totalScore,
@@ -27,7 +29,6 @@ export default function CurrencyScoreCard({
   pmiSignal,
   centralBankTone,
   rateDifferential,
-  creditConditions,
   commodityTailwind,
   cpiActual,
   cpiPrevious,
@@ -37,12 +38,14 @@ export default function CurrencyScoreCard({
   manualOverride,
   onClick,
 }: CurrencyScoreCardProps) {
+  const hasCommodityExposure = COMMODITY_CURRENCIES.includes(currency);
+
   const getRatingGlow = (rating: string) => {
     switch (rating) {
       case 'Bullish':
-        return 'shadow-[0_0_20px_-5px_rgba(34,197,94,0.3)]';
+        return 'shadow-[0_0_25px_-5px_rgba(34,197,94,0.35)]';
       case 'Bearish':
-        return 'shadow-[0_0_20px_-5px_rgba(239,68,68,0.3)]';
+        return 'shadow-[0_0_25px_-5px_rgba(239,68,68,0.35)]';
       default:
         return '';
     }
@@ -76,43 +79,42 @@ export default function CurrencyScoreCard({
     return 'text-gray-400';
   };
 
-  const getScoreBg = (score: number) => {
-    if (score > 0) return 'bg-sentiment-bullish/10';
-    if (score < 0) return 'bg-sentiment-bearish/10';
-    return 'bg-gray-500/10';
-  };
-
+  // BULLISH signals: Up, Hawkish, Yes = GREEN
+  // BEARISH signals: Down, Dovish, No = RED
   const getTrendColor = (value: string) => {
-    if (['Up', 'Hawkish', 'Easing', 'Yes', 'Positive', 'Rising'].includes(value)) {
-      return 'text-sentiment-bullish';
+    if (['Up', 'Hawkish', 'Yes', 'Positive', 'Rising'].includes(value)) {
+      return 'text-green-400';
     }
-    if (['Down', 'Dovish', 'Tightening', 'No', 'Negative', 'Falling'].includes(value)) {
-      return 'text-sentiment-bearish';
+    if (['Down', 'Dovish', 'No', 'Negative', 'Falling'].includes(value)) {
+      return 'text-red-400';
     }
     return 'text-gray-400';
   };
 
+  const getTrendBg = (value: string) => {
+    if (['Up', 'Hawkish', 'Yes', 'Positive', 'Rising'].includes(value)) {
+      return 'bg-green-500/10 border-green-500/20';
+    }
+    if (['Down', 'Dovish', 'No', 'Negative', 'Falling'].includes(value)) {
+      return 'bg-red-500/10 border-red-500/20';
+    }
+    return 'bg-gray-500/10 border-gray-500/20';
+  };
+
   const getTrendIcon = (value: string) => {
-    if (['Up', 'Hawkish', 'Easing', 'Yes', 'Positive', 'Rising'].includes(value)) {
-      return '↑';
+    if (['Up', 'Hawkish', 'Yes', 'Positive', 'Rising'].includes(value)) {
+      return '▲';
     }
-    if (['Down', 'Dovish', 'Tightening', 'No', 'Negative', 'Falling'].includes(value)) {
-      return '↓';
+    if (['Down', 'Dovish', 'No', 'Negative', 'Falling'].includes(value)) {
+      return '▼';
     }
-    return '→';
+    return '●';
   };
 
   const formatNumber = (val: number | null | undefined) => {
     if (val === null || val === undefined) return null;
     return val.toFixed(1);
   };
-
-  const otherIndicators = [
-    { label: 'Central Bank', value: centralBankTone },
-    { label: 'Rate Diff', value: rateDifferential },
-    { label: 'Credit', value: creditConditions },
-    { label: 'Commodity', value: commodityTailwind },
-  ];
 
   return (
     <div
@@ -151,7 +153,7 @@ export default function CurrencyScoreCard({
             </div>
           </div>
 
-          <div className={`flex flex-col items-end`}>
+          <div className="flex flex-col items-end">
             <div className={`text-3xl font-mono font-bold tracking-tighter ${getScoreColor(totalScore)}`}>
               {totalScore > 0 ? '+' : ''}{totalScore}
             </div>
@@ -159,82 +161,107 @@ export default function CurrencyScoreCard({
           </div>
         </div>
 
-        {/* Economic Data Section */}
-        <div className="space-y-3 mb-4">
-          {/* Inflation Row */}
-          <div className="bg-surface-secondary/50 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Inflation</span>
-              <div className={`flex items-center gap-1.5 font-semibold text-sm ${getTrendColor(inflationTrend)}`}>
-                <span>{getTrendIcon(inflationTrend)}</span>
-                <span>{inflationTrend}</span>
-              </div>
-            </div>
-            {(cpiActual !== null && cpiActual !== undefined) && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-lg font-mono font-semibold text-text-primary">
-                  {formatNumber(cpiActual)}%
-                </span>
-                {cpiPrevious !== null && cpiPrevious !== undefined && (
-                  <>
-                    <span className="text-text-muted">←</span>
-                    <span className="text-sm font-mono text-text-muted">
-                      {formatNumber(cpiPrevious)}%
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+        {/* ═══════════════════════════════════════════════════════════════════
+            HERO SECTION: 2Y Yield Differential - The Primary Signal
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className={`relative rounded-lg p-4 mb-4 border ${getTrendBg(rateDifferential)}`}>
+          {/* Decorative corner accent */}
+          <div className={`absolute top-0 right-0 w-16 h-16 opacity-20 ${
+            rateDifferential === 'Up' ? 'bg-gradient-to-bl from-green-500' :
+            rateDifferential === 'Down' ? 'bg-gradient-to-bl from-red-500' :
+            'bg-gradient-to-bl from-gray-500'
+          } rounded-bl-full`} />
 
-          {/* PMI Row */}
-          <div className="bg-surface-secondary/50 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Services PMI</span>
-              <div className={`flex items-center gap-1.5 font-semibold text-sm ${getTrendColor(pmiSignal)}`}>
-                <span>{getTrendIcon(pmiSignal)}</span>
-                <span>{pmiSignal}</span>
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
+                2Y Yield Spread
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-3">
+                <span className={`text-2xl font-bold tracking-tight ${getTrendColor(rateDifferential)}`}>
+                  {rateDifferential}
+                </span>
+                <span className={`text-lg ${getTrendColor(rateDifferential)}`}>
+                  {getTrendIcon(rateDifferential)}
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] text-text-muted uppercase tracking-wider">vs USD</div>
+                <div className="text-xs text-text-secondary">MA20 × MA60</div>
               </div>
             </div>
-            {(pmiActual !== null && pmiActual !== undefined) && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-lg font-mono font-semibold text-text-primary">
-                  {formatNumber(pmiActual)}
-                </span>
-                {pmiPrevious !== null && pmiPrevious !== undefined && (
-                  <>
-                    <span className="text-text-muted">←</span>
-                    <span className="text-sm font-mono text-text-muted">
-                      {formatNumber(pmiPrevious)}
-                    </span>
-                  </>
-                )}
-                {pmiActual !== null && (
-                  <span className={`text-xs ml-auto ${pmiActual >= 50 ? 'text-sentiment-bullish' : 'text-sentiment-bearish'}`}>
-                    {pmiActual >= 50 ? 'Expansion' : 'Contraction'}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Other Indicators Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          {otherIndicators.map(({ label, value }) => (
-            <div key={label} className="flex flex-col p-2 rounded-md bg-surface-secondary/30">
-              <span className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">{label}</span>
-              <span className={`text-sm font-medium ${getTrendColor(value)}`}>
-                {value}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECONDARY ROW: Central Bank + Commodity (if applicable)
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className={`grid ${hasCommodityExposure ? 'grid-cols-2' : 'grid-cols-1'} gap-2 mb-3`}>
+          {/* Central Bank Tone */}
+          <div className="bg-surface-secondary/40 rounded-lg p-3">
+            <div className="flex items-center gap-1 mb-1.5">
+              <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+                Central Bank
               </span>
             </div>
-          ))}
+            <div className={`text-base font-semibold ${getTrendColor(centralBankTone)}`}>
+              {centralBankTone}
+            </div>
+          </div>
+
+          {/* Commodity Tailwind - only for AUD, CAD, NZD */}
+          {hasCommodityExposure && (
+            <div className="bg-surface-secondary/40 rounded-lg p-3">
+              <div className="flex items-center gap-1 mb-1.5">
+                <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+                  Commodity
+                </span>
+              </div>
+              <div className={`text-base font-semibold ${getTrendColor(commodityTailwind)}`}>
+                {commodityTailwind === 'Yes' ? 'Tailwind' : commodityTailwind === 'No' ? 'Headwind' : 'Neutral'}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            TERTIARY ROW: CPI + PMI - Compact Economic Context
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border-primary/20">
+          {/* CPI Pill */}
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface-secondary/30 flex-1">
+            <span className="text-[9px] font-medium text-text-muted uppercase tracking-wider">CPI</span>
+            <div className="flex items-center gap-1 ml-auto">
+              {cpiActual !== null && cpiActual !== undefined && (
+                <span className="text-xs font-mono text-text-secondary">{formatNumber(cpiActual)}%</span>
+              )}
+              <span className={`text-[10px] font-semibold ${getTrendColor(inflationTrend)}`}>
+                {getTrendIcon(inflationTrend)}
+              </span>
+            </div>
+          </div>
+
+          {/* PMI Pill */}
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface-secondary/30 flex-1">
+            <span className="text-[9px] font-medium text-text-muted uppercase tracking-wider">PMI</span>
+            <div className="flex items-center gap-1 ml-auto">
+              {pmiActual !== null && pmiActual !== undefined && (
+                <span className="text-xs font-mono text-text-secondary">{formatNumber(pmiActual)}</span>
+              )}
+              <span className={`text-[10px] font-semibold ${getTrendColor(pmiSignal)}`}>
+                {getTrendIcon(pmiSignal)}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* AI Justification */}
         {aiJustification && (
-          <div className="mt-4 pt-3 border-t border-border-primary/30">
-            <p className="text-xs text-text-muted leading-relaxed line-clamp-2">
+          <div className="mt-3 pt-3 border-t border-border-primary/20">
+            <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2 italic">
               {aiJustification}
             </p>
           </div>

@@ -78,7 +78,8 @@ async function runSentimentScrapers() {
 /**
  * Run fundamental analysis (daily at 18:00 UTC)
  * - Trading Economics CPI/PMI data
- * - AI analysis with Gemini
+ * - FRED API data (VIX, yields, commodities)
+ * - Rule-based signal calculations
  */
 async function runFundamentalAnalysis() {
   logger.info('[Scheduler] Running daily fundamental analysis (18:00 UTC)');
@@ -102,25 +103,54 @@ async function runFundamentalAnalysis() {
       logger.error('[Scheduler] PMI data update failed:', error);
     }
 
-    // 3. Run AI analysis with Gemini (if configured)
-    if (process.env.GEMINI_API_KEY) {
+    // 3. Fetch FRED data (VIX, US yields, Oil)
+    if (process.env.FRED_API_KEY) {
       try {
-        const { analyzeMarket } = await import('@/services/ai.service');
-        const aiResult = await analyzeMarket();
-
-        if (aiResult.success) {
-          logger.info('[Scheduler] AI analysis completed successfully');
-        } else {
-          logger.error('[Scheduler] AI analysis failed:', aiResult.error);
-        }
+        const { updateAllFredData, cleanupOldData } = await import('@/services/fred.service');
+        const fredResult = await updateAllFredData();
+        logger.info(`[Scheduler] FRED data: VIX=${fredResult.vix.count}, Yield=${fredResult.usYield.count}, Oil=${fredResult.oil.count}`);
+        await cleanupOldData();
       } catch (error) {
-        logger.error('[Scheduler] AI analysis error:', error);
+        logger.error('[Scheduler] FRED data update failed:', error);
       }
     } else {
-      logger.info('[Scheduler] Skipping AI analysis - GEMINI_API_KEY not configured');
+      logger.info('[Scheduler] Skipping FRED data - FRED_API_KEY not configured');
     }
 
-    // 4. Recalculate scores for all currencies
+    // 4. Fetch international yields from Trading Economics
+    try {
+      const { updateYieldData, applyYieldDifferentials } = await import('@/services/yields.service');
+      const yieldResult = await updateYieldData();
+      logger.info(`[Scheduler] International yields update: ${yieldResult.updated} currencies updated`);
+      await applyYieldDifferentials();
+      logger.info('[Scheduler] Yield differentials applied');
+    } catch (error) {
+      logger.error('[Scheduler] Yield data update failed:', error);
+    }
+
+    // 5. Fetch commodity prices and apply tailwinds
+    try {
+      const { updateCommodityData, applyCommodityTailwinds } = await import('@/services/commodities.service');
+      const commodityResult = await updateCommodityData();
+      logger.info(`[Scheduler] Commodity data update: ${commodityResult.updated} commodities updated`);
+      await applyCommodityTailwinds();
+      logger.info('[Scheduler] Commodity tailwinds applied');
+    } catch (error) {
+      logger.error('[Scheduler] Commodity data update failed:', error);
+    }
+
+    // 6. Calculate and apply risk sentiment from VIX
+    try {
+      const { updateRiskRegime, applyRiskOverlays } = await import('@/services/risk-sentiment.service');
+      const riskResult = await updateRiskRegime();
+      logger.info(`[Scheduler] Risk regime: ${riskResult.regime}`);
+      await applyRiskOverlays();
+      logger.info('[Scheduler] Risk overlays applied');
+    } catch (error) {
+      logger.error('[Scheduler] Risk sentiment update failed:', error);
+    }
+
+    // 7. Recalculate final scores for all currencies
     try {
       const { recalculateAllScores } = await import('@/services/fundamental.service');
       await recalculateAllScores();

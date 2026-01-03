@@ -90,6 +90,43 @@ const FundamentalItems: MenuItem[] = [
   },
 ];
 
+const ChartsItems: MenuItem[] = [
+  {
+    label: 'Yield Differentials',
+    href: '/charts/yield-differentials',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M3 3v18h18" />
+        <path d="M7 16l4-8 4 4 5-9" />
+      </svg>
+    ),
+    description: '2Y bond yield spreads vs USD',
+  },
+  {
+    label: 'Risk Sentiment',
+    href: '/charts/risk-sentiment',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </svg>
+    ),
+    description: 'VIX-based risk regime',
+  },
+  {
+    label: 'Commodities',
+    href: '/charts/commodities',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
+      </svg>
+    ),
+    description: 'Iron ore, copper, oil, dairy',
+  },
+];
+
 export default function MegaMenu({ userEmail, isAdmin, onSearch }: MegaMenuProps) {
   const pathname = usePathname();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -283,6 +320,66 @@ export default function MegaMenu({ userEmail, isAdmin, onSearch }: MegaMenuProps
                   <div className="bg-surface-primary/95 backdrop-blur-xl rounded-xl border border-border-primary/50 shadow-2xl shadow-black/20 overflow-hidden">
                     <div className="p-2">
                       {FundamentalItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group ${
+                            isActiveRoute(item.href)
+                              ? 'bg-accent-blue/10 text-accent-blue'
+                              : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+                          }`}
+                        >
+                          <span className={`mt-0.5 ${isActiveRoute(item.href) ? 'text-accent-blue' : 'text-text-muted group-hover:text-text-primary'}`}>
+                            {item.icon}
+                          </span>
+                          <div>
+                            <div className="text-sm font-medium">{item.label}</div>
+                            <div className="text-xs text-text-muted mt-0.5">{item.description}</div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charts Dropdown */}
+              <div
+                className="relative"
+                onMouseEnter={() => handleMouseEnter('charts')}
+                onMouseLeave={handleMouseLeave}
+              >
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isParentActive(ChartsItems)
+                      ? 'text-accent-blue bg-accent-blue/10'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+                  }`}
+                >
+                  Charts
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      activeDropdown === 'charts' ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Charts Dropdown Panel */}
+                <div
+                  className={`absolute top-full left-0 mt-1 w-64 origin-top-left transition-all duration-200 ${
+                    activeDropdown === 'charts'
+                      ? 'opacity-100 scale-100 translate-y-0'
+                      : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+                  }`}
+                >
+                  <div className="bg-surface-primary/95 backdrop-blur-xl rounded-xl border border-border-primary/50 shadow-2xl shadow-black/20 overflow-hidden">
+                    <div className="p-2">
+                      {ChartsItems.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
@@ -515,6 +612,52 @@ export default function MegaMenu({ userEmail, isAdmin, onSearch }: MegaMenuProps
               >
                 <div className="pl-4 py-1 space-y-1">
                   {FundamentalItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActiveRoute(item.href)
+                          ? 'text-accent-blue bg-accent-blue/5'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+                      }`}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Accordion */}
+            <div className="px-2">
+              <button
+                onClick={() => setMobileAccordion(mobileAccordion === 'charts' ? null : 'charts')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  isParentActive(ChartsItems)
+                    ? 'text-accent-blue bg-accent-blue/10'
+                    : 'text-text-primary hover:bg-surface-hover'
+                }`}
+              >
+                <span>Charts</span>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    mobileAccordion === 'charts' ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ${
+                  mobileAccordion === 'charts' ? 'max-h-96' : 'max-h-0'
+                }`}
+              >
+                <div className="pl-4 py-1 space-y-1">
+                  {ChartsItems.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}

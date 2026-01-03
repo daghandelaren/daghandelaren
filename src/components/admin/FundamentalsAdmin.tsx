@@ -8,7 +8,6 @@ interface CurrencyData {
   pmiSignal: string;
   centralBankTone: string;
   rateDifferential: string;
-  creditConditions: string;
   commodityTailwind: string;
   totalScore: number;
   rating: string;
@@ -31,7 +30,6 @@ const INDICATOR_OPTIONS = {
   pmiSignal: ['Up', 'Flat', 'Down'],
   centralBankTone: ['Hawkish', 'Neutral', 'Dovish'],
   rateDifferential: ['Up', 'Flat', 'Down'],
-  creditConditions: ['Easing', 'Neutral', 'Tightening'],
   commodityTailwind: ['Yes', 'Neutral', 'No'],
 };
 
@@ -51,6 +49,14 @@ export default function FundamentalsAdmin() {
   const [editForm, setEditForm] = useState<Partial<CurrencyData>>({});
   const [scrapingCpi, setScrapingCpi] = useState(false);
   const [scrapingPmi, setScrapingPmi] = useState(false);
+  const [scrapingYields, setScrapingYields] = useState(false);
+  const [scrapingCommodities, setScrapingCommodities] = useState(false);
+  const [dataUpdateLog, setDataUpdateLog] = useState<{
+    cpi: string | null;
+    pmi: string | null;
+    yields: string | null;
+    commodities: string | null;
+  }>({ cpi: null, pmi: null, yields: null, commodities: null });
 
   // Fetch data
   const fetchData = async () => {
@@ -67,8 +73,20 @@ export default function FundamentalsAdmin() {
     }
   };
 
+  // Fetch data update status
+  const fetchDataStatus = async () => {
+    try {
+      const res = await fetch('/api/fundamental/data-status');
+      const data = await res.json();
+      setDataUpdateLog(data);
+    } catch (error) {
+      console.error('Failed to fetch data status:', error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchDataStatus();
   }, []);
 
   // Update settings
@@ -97,7 +115,6 @@ export default function FundamentalsAdmin() {
       pmiSignal: currency.pmiSignal,
       centralBankTone: currency.centralBankTone,
       rateDifferential: currency.rateDifferential,
-      creditConditions: currency.creditConditions,
       commodityTailwind: currency.commodityTailwind,
     });
   };
@@ -185,6 +202,7 @@ export default function FundamentalsAdmin() {
 
       if (data.success !== false) {
         await fetchData();
+        await fetchDataStatus();
         alert(`CPI data updated: ${data.updated || 0} currencies`);
       } else {
         alert(`Error: ${data.error}`);
@@ -208,6 +226,7 @@ export default function FundamentalsAdmin() {
 
       if (data.success !== false) {
         await fetchData();
+        await fetchDataStatus();
         alert(`PMI data updated: ${data.updated || 0} currencies`);
       } else {
         alert(`Error: ${data.error}`);
@@ -217,6 +236,54 @@ export default function FundamentalsAdmin() {
       alert('Failed to scrape PMI data');
     } finally {
       setScrapingPmi(false);
+    }
+  };
+
+  // Scrape Yield data from Trading Economics
+  const scrapeYieldsData = async () => {
+    if (!confirm('Scrape Yield data from Trading Economics?')) return;
+
+    setScrapingYields(true);
+    try {
+      const res = await fetch('/api/fundamental/yields-data', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success !== false) {
+        await fetchData();
+        await fetchDataStatus();
+        alert(`Yield data updated: ${data.updated || 0} currencies`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Yield scrape error:', error);
+      alert('Failed to scrape Yield data');
+    } finally {
+      setScrapingYields(false);
+    }
+  };
+
+  // Scrape Commodity data from Trading Economics
+  const scrapeCommoditiesData = async () => {
+    if (!confirm('Scrape Commodity data from Trading Economics?')) return;
+
+    setScrapingCommodities(true);
+    try {
+      const res = await fetch('/api/fundamental/commodities-data', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success !== false) {
+        await fetchData();
+        await fetchDataStatus();
+        alert(`Commodity data updated: ${data.updated || 0} commodities`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Commodity scrape error:', error);
+      alert('Failed to scrape Commodity data');
+    } finally {
+      setScrapingCommodities(false);
     }
   };
 
@@ -318,14 +385,14 @@ export default function FundamentalsAdmin() {
 
       {/* Trading Economics Data Controls */}
       <div className="card p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-text-primary">Trading Economics Data</h3>
             <p className="text-sm text-text-muted mt-1">
-              Manually scrape CPI and PMI data from Trading Economics
+              Manually scrape economic data from Trading Economics
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={scrapeCpiData}
               disabled={scrapingCpi}
@@ -346,6 +413,65 @@ export default function FundamentalsAdmin() {
               )}
               {scrapingPmi ? 'Scraping...' : 'Scrape PMI'}
             </button>
+            <button
+              onClick={scrapeYieldsData}
+              disabled={scrapingYields}
+              className="px-4 py-2 bg-teal-500 text-white rounded-lg text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {scrapingYields && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              )}
+              {scrapingYields ? 'Scraping...' : 'Scrape Yields'}
+            </button>
+            <button
+              onClick={scrapeCommoditiesData}
+              disabled={scrapingCommodities}
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {scrapingCommodities && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              )}
+              {scrapingCommodities ? 'Scraping...' : 'Scrape Commodities'}
+            </button>
+          </div>
+        </div>
+
+        {/* Data Update Log */}
+        <div className="border-t border-border-primary pt-4">
+          <h4 className="text-sm font-medium text-text-primary mb-3">Last Updated</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <div className="text-xs text-text-muted mb-1">CPI</div>
+              <div className="text-sm text-text-primary font-mono">
+                {dataUpdateLog.cpi
+                  ? new Date(dataUpdateLog.cpi).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Never'}
+              </div>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <div className="text-xs text-text-muted mb-1">PMI</div>
+              <div className="text-sm text-text-primary font-mono">
+                {dataUpdateLog.pmi
+                  ? new Date(dataUpdateLog.pmi).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Never'}
+              </div>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <div className="text-xs text-text-muted mb-1">Yields</div>
+              <div className="text-sm text-text-primary font-mono">
+                {dataUpdateLog.yields
+                  ? new Date(dataUpdateLog.yields).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Never'}
+              </div>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <div className="text-xs text-text-muted mb-1">Commodities</div>
+              <div className="text-sm text-text-primary font-mono">
+                {dataUpdateLog.commodities
+                  ? new Date(dataUpdateLog.commodities).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Never'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -364,7 +490,6 @@ export default function FundamentalsAdmin() {
                 <th className="text-left py-3 px-4 font-medium text-text-muted">PMI</th>
                 <th className="text-left py-3 px-4 font-medium text-text-muted">CB Tone</th>
                 <th className="text-left py-3 px-4 font-medium text-text-muted">Rate Diff</th>
-                <th className="text-left py-3 px-4 font-medium text-text-muted">Credit</th>
                 <th className="text-left py-3 px-4 font-medium text-text-muted">Commodity</th>
                 <th className="text-center py-3 px-4 font-medium text-text-muted">Score</th>
                 <th className="text-center py-3 px-4 font-medium text-text-muted">Rating</th>
@@ -387,7 +512,7 @@ export default function FundamentalsAdmin() {
 
                   {editingCurrency === currency.currency ? (
                     <>
-                      {(['inflationTrend', 'pmiSignal', 'centralBankTone', 'rateDifferential', 'creditConditions', 'commodityTailwind'] as const).map((key) => (
+                      {(['inflationTrend', 'pmiSignal', 'centralBankTone', 'rateDifferential', 'commodityTailwind'] as const).map((key) => (
                         <td key={key} className="py-2 px-2">
                           <select
                             value={editForm[key] || ''}
@@ -429,7 +554,6 @@ export default function FundamentalsAdmin() {
                       <td className="py-3 px-4 text-text-secondary">{currency.pmiSignal}</td>
                       <td className="py-3 px-4 text-text-secondary">{currency.centralBankTone}</td>
                       <td className="py-3 px-4 text-text-secondary">{currency.rateDifferential}</td>
-                      <td className="py-3 px-4 text-text-secondary">{currency.creditConditions}</td>
                       <td className="py-3 px-4 text-text-secondary">{currency.commodityTailwind}</td>
                       <td className={`py-3 px-4 text-center font-mono font-medium ${
                         currency.totalScore > 0 ? 'text-sentiment-bullish' : currency.totalScore < 0 ? 'text-sentiment-bearish' : 'text-gray-400'

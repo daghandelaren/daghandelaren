@@ -17,70 +17,78 @@ const GEMINI_MODELS = [
   'gemini-2.5-pro',        // Pro version if flash fails
 ];
 
-// Macro analyst system prompt
-const MACRO_ANALYST_PROMPT = `You are a macro/FX analyst AI. You are preparing a daily FX macro snapshot based on your knowledge of recent market events.
+// Central Bank Analyst prompt - focused exclusively on monetary policy tone
+const CENTRAL_BANK_ANALYST_PROMPT = `You are a Central Bank Analyst AI specializing exclusively in monetary policy communication and decision-making.
+Your sole task is to assess central bank tone — nothing else (no commodities, no risk sentiment, no FX performance, no geopolitics).
 
-For each of the following currencies: AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD
+## Data Requirements (MANDATORY)
 
-Determine and report based on recent central bank communications, economic data, and market conditions:
+Every time you receive this prompt, you MUST:
 
-1) Central bank tone
-Possible values (choose ONE): **Hawkish, Neutral, Dovish**
-- "Hawkish": signalling higher rates or longer restrictive stance, strong focus on inflation risks
-- "Dovish": signalling cuts or earlier/larger easing, focus on growth/financial stability risks
-- "Neutral": mixed signals or clearly "data dependent" without a strong directional bias
+- Browse the web and use up-to-date information from the last 1–2 weeks, with extra weight on anything since the previous Friday
+- Rely only on primary and credible sources, including:
+  - Central bank statements, minutes, and rate decisions
+  - Speeches/interviews by governors and voting members
+  - Official projections and policy reports
+  - Market-relevant summaries from major banks or reputable financial media
 
-2) Rate differential (vs USD)
-Possible values (choose ONE): **Positive, Flat, Negative**
-- "Positive": this currency has higher policy rate or yield advantage vs USD
-- "Negative": this currency has lower policy rate or yield disadvantage vs USD
-- "Flat": roughly similar rates to USD or USD itself
+## Scope
 
-3) Credit conditions
-Possible values (choose ONE): **Easing, Neutral, Tightening**
-- "Easing": improving credit availability, narrower spreads, supportive policy measures
-- "Tightening": reduced credit availability, stricter lending standards, higher spreads
-- "Neutral": no clear directional change or mixed signals
+Assess the central bank tone for the following currencies:
+AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD
 
-4) Commodity tailwind
-Possible values (choose ONE): **Yes, No, Neutral**
-- "Yes": recent commodity price dynamics are a net positive for this currency
-- "No": recent commodity price dynamics are a net headwind
-- "Neutral": limited or mixed impact
+## Tone Classification (Choose ONE per currency)
 
-OUTPUT FORMAT (CRITICAL - follow exactly):
-Return a JSON object with:
-1. "riskSentiment": The GLOBAL market risk sentiment (Risk-on, Neutral, or Risk-off)
-   - "Risk-on": markets favor risky assets (equities up, VIX low, credit spreads tight)
-   - "Risk-off": markets favor safe havens (equities down, VIX elevated, flight to quality)
-   - "Neutral": mixed signals or no clear risk bias
-2. "riskSentimentJustification": 2-3 sentences explaining WHY you chose this risk sentiment, citing specific market indicators (VIX level, equity performance, credit spreads, etc.)
-3. "currencies": An array with exactly 8 objects, one for each currency
+**Hawkish**
+Signals higher rates or a longer restrictive stance; inflation risks emphasized; guidance, projections, or votes shift toward tighter policy.
 
-Each currency object must have these exact keys:
-- currency: string (AUD, CAD, CHF, EUR, GBP, JPY, NZD, USD)
-- centralBankTone: string (Hawkish, Neutral, or Dovish)
-- rateDifferential: string (Positive, Flat, or Negative)
-- creditConditions: string (Easing, Neutral, or Tightening)
-- commodityTailwind: string (Yes, No, or Neutral)
-- justification: string (1-2 sentences explaining the key drivers)
+**Dovish**
+Signals rate cuts or earlier/larger easing; growth or financial stability risks emphasized; guidance, projections, or votes shift toward looser policy.
 
-Example format:
+**Neutral**
+Mixed signals or clearly data-dependent communication with no directional shift in guidance, risks, or voting behavior.
+
+## Consistency Checklist (MUST COMPLETE INTERNALLY BEFORE CLASSIFYING)
+
+Before assigning a tone, explicitly evaluate the following yes/no checklist:
+
+1. Changed guidance wording? (e.g. "restrictive for longer", "closer to neutral")
+2. Changed projections path? (rates, inflation, growth, dots, fan charts)
+3. Changed balance of risks? (inflation vs growth/financial stability)
+4. Vote split shifted? (more hawkish or dovish dissent than before)
+5. Key speaker rhetoric changed? (chair/governor vs prior communications)
+
+**Decision Rule**
+- If 2 or more answers point clearly in one direction → classify Hawkish or Dovish
+- If 0–1 directional changes or offsetting signals → classify Neutral
+- Do NOT infer tone from market reactions, FX moves, or personal judgment.
+
+## Output Format (STRICT — DO NOT DEVIATE)
+
+Return a JSON object with exactly 8 currency objects:
+
 {
-  "riskSentiment": "Risk-on",
-  "riskSentimentJustification": "Global equities near all-time highs with S&P 500 up 2% this week. VIX at 13.5 indicates low fear. Credit spreads remain tight supporting risk appetite.",
   "currencies": [
     {
       "currency": "AUD",
       "centralBankTone": "Hawkish",
-      "rateDifferential": "Positive",
-      "creditConditions": "Neutral",
-      "commodityTailwind": "Yes",
-      "justification": "RBA maintained hawkish stance citing sticky services inflation. Iron ore prices supporting AUD."
+      "justification": "RBA held rates but removed easing bias, citing sticky services inflation. Governor Bullock emphasized patience."
     },
     ...
   ]
 }
+
+## Rules
+
+- Use ONLY these values for centralBankTone: Hawkish, Dovish, Neutral
+- Justification: maximum 2 sentences
+- Justification must reference specific evidence (e.g. latest meeting, guidance wording change, vote split, projection revision, or key speech)
+
+## Prohibited
+
+- No discussion of commodities, credit, risk sentiment, or FX price action
+- No forward-looking speculation beyond stated policy communication
+- No narrative storytelling — stay analytical and evidence-based
 
 Return ONLY the JSON object, no other text.`;
 
@@ -97,15 +105,10 @@ Be concise, specific, and actionable in your responses. Reference specific data 
 export interface CurrencyAnalysis {
   currency: string;
   centralBankTone: string;
-  rateDifferential: string;
-  creditConditions: string;
-  commodityTailwind: string;
   justification: string;
 }
 
 export interface AnalysisResult {
-  riskSentiment: string; // Global: Risk-on, Neutral, Risk-off
-  riskSentimentJustification: string; // AI's reasoning for risk sentiment
   currencies: CurrencyAnalysis[];
 }
 
@@ -188,7 +191,7 @@ function parseAIResponse(text: string): AnalysisResult {
 }
 
 /**
- * Run AI market analysis for all currencies using Gemini
+ * Run AI central bank tone analysis for all currencies using Gemini
  * Uses a two-pass approach: initial analysis + confirmation
  */
 export async function analyzeMarket(): Promise<{
@@ -202,8 +205,8 @@ export async function analyzeMarket(): Promise<{
 
   try {
     // FIRST PASS: Initial analysis
-    console.log('[AI] Starting first pass analysis...');
-    const firstPrompt = MACRO_ANALYST_PROMPT + '\n\nAnalyze the current macro environment for all 8 major currencies and provide your assessment based on your latest knowledge.';
+    console.log('[AI] Starting central bank tone analysis (first pass)...');
+    const firstPrompt = CENTRAL_BANK_ANALYST_PROMPT;
 
     const firstText = await generateWithFallback(firstPrompt, true);
 
@@ -216,27 +219,29 @@ export async function analyzeMarket(): Promise<{
     }
 
     // Validate first result
-    if (!firstResult.riskSentiment || !Array.isArray(firstResult.currencies) || firstResult.currencies.length !== 8) {
+    if (!Array.isArray(firstResult.currencies) || firstResult.currencies.length !== 8) {
       return { success: false, error: `Invalid first response format: expected 8 currencies, got ${firstResult.currencies?.length || 0}` };
     }
 
     console.log('[AI] First pass complete. Starting confirmation pass...');
 
     // SECOND PASS: Confirmation - ask AI to review its own analysis
-    const confirmationPrompt = `You previously provided this FX macro analysis:
+    const confirmationPrompt = `You previously provided this central bank tone analysis:
 
 ${JSON.stringify(firstResult, null, 2)}
 
-Please review your analysis carefully. Are you confident in these assessments?
+Please review your analysis carefully using the same consistency checklist:
 
-Consider:
-- Is each central bank tone accurate based on recent communications?
-- Are the rate differentials correct relative to current policy rates?
-- Do the credit conditions reflect the actual lending environment?
-- Are commodity tailwinds/headwinds accurate for commodity-linked currencies (AUD, CAD, NZD)?
+1. Changed guidance wording?
+2. Changed projections path?
+3. Changed balance of risks?
+4. Vote split shifted?
+5. Key speaker rhetoric changed?
 
-If you want to make any changes, provide the corrected full JSON response.
-If you are confident the analysis is correct, return the same JSON response.
+Decision Rule: 2+ directional changes = Hawkish/Dovish, otherwise Neutral.
+
+If you want to make any corrections based on this review, provide the corrected JSON.
+If you are confident the analysis is correct, return the same JSON.
 
 Return ONLY the JSON object in the same format, no other text.`;
 
@@ -247,35 +252,27 @@ Return ONLY the JSON object in the same format, no other text.`;
       result = parseAIResponse(confirmText);
     } catch {
       console.error('Failed to parse confirmation response, using first result:', confirmText);
-      // Fall back to first result if confirmation parsing fails
       result = firstResult;
     }
 
     // Validate final result
-    if (!result.riskSentiment || !Array.isArray(result.currencies) || result.currencies.length !== 8) {
+    if (!Array.isArray(result.currencies) || result.currencies.length !== 8) {
       console.log('[AI] Confirmation result invalid, using first result');
       result = firstResult;
     }
 
     console.log('[AI] Confirmation pass complete.');
 
-    // Update global risk regime and justification in settings
-    const { updateSettings } = await import('./fundamental.service');
-    await updateSettings({
-      riskRegime: result.riskSentiment,
-      riskSentimentJustification: result.riskSentimentJustification || '',
-    });
-    console.log(`[AI] Updated global risk regime to: ${result.riskSentiment}`);
-    console.log(`[AI] Risk sentiment justification: ${result.riskSentimentJustification || 'N/A'}`);
+    // Log the results
+    for (const c of result.currencies) {
+      console.log(`[AI] ${c.currency}: ${c.centralBankTone} - ${c.justification}`);
+    }
 
-    // Update database with AI results (only the fields AI analyzes)
+    // Update database with AI results (only centralBankTone)
     await bulkUpdateCurrencies(
       result.currencies.map((r) => ({
         currency: r.currency,
         centralBankTone: r.centralBankTone,
-        rateDifferential: r.rateDifferential,
-        creditConditions: r.creditConditions,
-        commodityTailwind: r.commodityTailwind,
         aiJustification: r.justification,
       })),
       'AI'
@@ -318,7 +315,6 @@ export async function chat(
         pmi: c.pmiSignal,
         centralBank: c.centralBankTone,
         rateDiff: c.rateDifferential,
-        credit: c.creditConditions,
         commodity: c.commodityTailwind,
       },
       justification: c.aiJustification,

@@ -13,13 +13,47 @@ interface CurrencyScore {
   pmiSignal: string;
   centralBankTone: string;
   rateDifferential: string;
-  creditConditions: string;
   commodityTailwind: string;
+  cpiActual: number | null;
+  cpiPrevious: number | null;
+  pmiActual: number | null;
+  pmiPrevious: number | null;
   aiJustification: string | null;
   manualOverride: boolean;
   lastUpdated: string;
   updatedBy: string | null;
 }
+
+// Indicator explanations for the modal
+const INDICATOR_EXPLANATIONS = {
+  rateDiff: {
+    title: '2Y Yield Spread vs USD',
+    description: 'Compares the 20-day and 60-day moving averages of the yield differential between this currency and USD. When the spread improves (MA20 crosses above MA60), it signals rate expectations are becoming more favorable.',
+    scoring: 'Up (improving) = Bullish (+1), Down (deteriorating) = Bearish (-1), Flat = Neutral (0)',
+  },
+  centralBank: {
+    title: 'Central Bank Tone',
+    description: 'AI-assessed monetary policy stance from recent central bank communications, speeches, and meeting minutes.',
+    scoring: 'Hawkish = Bullish (+1), Dovish = Bearish (-1), Neutral (0)',
+  },
+  commodity: {
+    title: 'Commodity Tailwind',
+    description: 'For commodity currencies only. AUD: Iron Ore + Copper basket. CAD: WTI Oil. NZD: Dairy. Signal based on price relative to 90-day MA and trend direction.',
+    scoring: 'Yes (tailwind) = Bullish (+1), No (headwind) = Bearish (-1), Neutral (0)',
+  },
+  inflation: {
+    title: 'Core CPI Trend',
+    description: 'Compares the latest Core CPI reading to the previous release. Falling inflation (disinflation) allows central banks to ease policy.',
+    scoring: 'Down = Bullish (+1), Up = Bearish (-1), Flat = Neutral (0)',
+  },
+  pmi: {
+    title: 'Services PMI',
+    description: 'Purchasing Managers Index for the services sector. Above 50 indicates expansion, below 50 indicates contraction.',
+    scoring: 'Rising = Bullish (+1), Falling = Bearish (-1), Flat = Neutral (0)',
+  },
+};
+
+const COMMODITY_CURRENCIES = ['AUD', 'CAD', 'NZD'];
 
 interface PairBias {
   pair: string;
@@ -139,8 +173,11 @@ export default function FundamentalDashboard() {
             pmiSignal={currency.pmiSignal}
             centralBankTone={currency.centralBankTone}
             rateDifferential={currency.rateDifferential}
-            creditConditions={currency.creditConditions}
             commodityTailwind={currency.commodityTailwind}
+            cpiActual={currency.cpiActual}
+            cpiPrevious={currency.cpiPrevious}
+            pmiActual={currency.pmiActual}
+            pmiPrevious={currency.pmiPrevious}
             aiJustification={currency.aiJustification}
             manualOverride={currency.manualOverride}
             onClick={() => setSelectedCurrency(currency)}
@@ -167,26 +204,23 @@ export default function FundamentalDashboard() {
           onClick={() => setSelectedCurrency(null)}
         >
           <div
-            className="bg-surface-primary border border-border-primary rounded-lg max-w-md w-full p-6"
+            className="bg-surface-primary border border-border-primary rounded-xl max-w-lg w-full max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-text-primary">
-                {selectedCurrency.currency} Analysis
-              </h3>
-              <button
-                onClick={() => setSelectedCurrency(null)}
-                className="text-text-muted hover:text-text-primary"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-muted">Score</span>
-                <span className={`font-bold ${
+            {/* Header */}
+            <div className="sticky top-0 bg-surface-primary border-b border-border-primary p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-text-primary">
+                  {selectedCurrency.currency}
+                </h3>
+                <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+                  selectedCurrency.rating === 'Bullish' ? 'bg-sentiment-bullish/15 text-sentiment-bullish border border-sentiment-bullish/30' :
+                  selectedCurrency.rating === 'Bearish' ? 'bg-sentiment-bearish/15 text-sentiment-bearish border border-sentiment-bearish/30' :
+                  'bg-gray-500/15 text-gray-400 border border-gray-500/30'
+                }`}>
+                  {selectedCurrency.rating}
+                </span>
+                <span className={`text-lg font-mono font-bold ${
                   selectedCurrency.totalScore > 0 ? 'text-sentiment-bullish' :
                   selectedCurrency.totalScore < 0 ? 'text-sentiment-bearish' :
                   'text-gray-400'
@@ -194,23 +228,133 @@ export default function FundamentalDashboard() {
                   {selectedCurrency.totalScore > 0 ? '+' : ''}{selectedCurrency.totalScore}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-muted">Rating</span>
-                <span className={`font-semibold ${
-                  selectedCurrency.rating === 'Bullish' ? 'text-sentiment-bullish' :
-                  selectedCurrency.rating === 'Bearish' ? 'text-sentiment-bearish' :
-                  'text-gray-400'
-                }`}>
-                  {selectedCurrency.rating}
-                </span>
+              <button
+                onClick={() => setSelectedCurrency(null)}
+                className="text-text-muted hover:text-text-primary p-1"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Yield Spread - Primary Indicator */}
+              <div className={`rounded-lg p-4 border ${
+                selectedCurrency.rateDifferential === 'Up' ? 'bg-sentiment-bullish/10 border-sentiment-bullish/20' :
+                selectedCurrency.rateDifferential === 'Down' ? 'bg-sentiment-bearish/10 border-sentiment-bearish/20' :
+                'bg-gray-500/10 border-gray-500/20'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-text-primary">{INDICATOR_EXPLANATIONS.rateDiff.title}</span>
+                  <span className={`text-lg font-bold ${
+                    selectedCurrency.rateDifferential === 'Up' ? 'text-sentiment-bullish' :
+                    selectedCurrency.rateDifferential === 'Down' ? 'text-sentiment-bearish' :
+                    'text-gray-400'
+                  }`}>
+                    {selectedCurrency.rateDifferential}
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted mb-2">{INDICATOR_EXPLANATIONS.rateDiff.description}</p>
+                <p className="text-[10px] text-accent-blue">{INDICATOR_EXPLANATIONS.rateDiff.scoring}</p>
               </div>
-              <hr className="border-border-primary" />
-              <div>
-                <p className="text-sm font-medium text-text-primary mb-2">AI Justification</p>
-                <p className="text-sm text-text-muted">
-                  {selectedCurrency.aiJustification || 'No AI justification available.'}
-                </p>
+
+              {/* Central Bank Tone */}
+              <div className="rounded-lg p-3 bg-surface-secondary/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-text-primary">{INDICATOR_EXPLANATIONS.centralBank.title}</span>
+                  <span className={`text-sm font-semibold ${
+                    selectedCurrency.centralBankTone === 'Hawkish' ? 'text-sentiment-bullish' :
+                    selectedCurrency.centralBankTone === 'Dovish' ? 'text-sentiment-bearish' :
+                    'text-gray-400'
+                  }`}>
+                    {selectedCurrency.centralBankTone}
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted mb-1">{INDICATOR_EXPLANATIONS.centralBank.description}</p>
+                <p className="text-[10px] text-accent-blue">{INDICATOR_EXPLANATIONS.centralBank.scoring}</p>
               </div>
+
+              {/* Commodity Tailwind - only for commodity currencies */}
+              {COMMODITY_CURRENCIES.includes(selectedCurrency.currency) && (
+                <div className="rounded-lg p-3 bg-surface-secondary/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-text-primary">{INDICATOR_EXPLANATIONS.commodity.title}</span>
+                    <span className={`text-sm font-semibold ${
+                      selectedCurrency.commodityTailwind === 'Yes' ? 'text-sentiment-bullish' :
+                      selectedCurrency.commodityTailwind === 'No' ? 'text-sentiment-bearish' :
+                      'text-gray-400'
+                    }`}>
+                      {selectedCurrency.commodityTailwind === 'Yes' ? 'Tailwind' :
+                       selectedCurrency.commodityTailwind === 'No' ? 'Headwind' : 'Neutral'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-muted mb-1">{INDICATOR_EXPLANATIONS.commodity.description}</p>
+                  <p className="text-[10px] text-accent-blue">{INDICATOR_EXPLANATIONS.commodity.scoring}</p>
+                </div>
+              )}
+
+              {/* Economic Data Row */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* CPI */}
+                <div className="rounded-lg p-3 bg-surface-secondary/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-text-muted uppercase">Core CPI</span>
+                    <span className={`text-xs font-semibold ${
+                      selectedCurrency.inflationTrend === 'Down' ? 'text-sentiment-bullish' :
+                      selectedCurrency.inflationTrend === 'Up' ? 'text-sentiment-bearish' :
+                      'text-gray-400'
+                    }`}>
+                      {selectedCurrency.inflationTrend}
+                    </span>
+                  </div>
+                  {selectedCurrency.cpiActual !== null && (
+                    <div className="text-sm font-mono text-text-primary mb-2">
+                      {selectedCurrency.cpiActual?.toFixed(1)}%
+                      {selectedCurrency.cpiPrevious !== null && (
+                        <span className="text-text-muted text-xs ml-1">← {selectedCurrency.cpiPrevious?.toFixed(1)}%</span>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-text-muted">{INDICATOR_EXPLANATIONS.inflation.description}</p>
+                </div>
+
+                {/* PMI */}
+                <div className="rounded-lg p-3 bg-surface-secondary/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-text-muted uppercase">Services PMI</span>
+                    <span className={`text-xs font-semibold ${
+                      selectedCurrency.pmiSignal === 'Up' ? 'text-sentiment-bullish' :
+                      selectedCurrency.pmiSignal === 'Down' ? 'text-sentiment-bearish' :
+                      'text-gray-400'
+                    }`}>
+                      {selectedCurrency.pmiSignal}
+                    </span>
+                  </div>
+                  {selectedCurrency.pmiActual !== null && (
+                    <div className="text-sm font-mono text-text-primary mb-2">
+                      {selectedCurrency.pmiActual?.toFixed(1)}
+                      {selectedCurrency.pmiPrevious !== null && (
+                        <span className="text-text-muted text-xs ml-1">← {selectedCurrency.pmiPrevious?.toFixed(1)}</span>
+                      )}
+                      <span className={`text-[10px] ml-2 ${(selectedCurrency.pmiActual ?? 0) >= 50 ? 'text-sentiment-bullish' : 'text-sentiment-bearish'}`}>
+                        {(selectedCurrency.pmiActual ?? 0) >= 50 ? 'Expansion' : 'Contraction'}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-text-muted">{INDICATOR_EXPLANATIONS.pmi.description}</p>
+                </div>
+              </div>
+
+              {/* AI Justification */}
+              {selectedCurrency.aiJustification && (
+                <div className="border-t border-border-primary pt-4">
+                  <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">AI Analysis</p>
+                  <p className="text-sm text-text-secondary italic leading-relaxed">
+                    {selectedCurrency.aiJustification}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

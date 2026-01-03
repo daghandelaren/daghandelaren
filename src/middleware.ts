@@ -6,7 +6,11 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Public routes - always accessible
-  if (pathname === '/' || pathname.startsWith('/api/auth') || pathname === '/api/access-request') {
+  if (pathname === '/' ||
+      pathname.startsWith('/api/auth') ||
+      pathname === '/api/access-request' ||
+      pathname.startsWith('/api/charts') ||
+      pathname.startsWith('/api/fundamental')) {
     return NextResponse.next();
   }
 

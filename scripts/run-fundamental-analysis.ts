@@ -57,10 +57,9 @@ async function main() {
       if (aiResult.success) {
         console.log('AI analysis completed successfully');
         if (aiResult.result) {
-          console.log(`\nGlobal Risk Sentiment: ${aiResult.result.riskSentiment}`);
-          console.log('\nCurrency Results:');
+          console.log('\nCentral Bank Tone Results:');
           for (const r of aiResult.result.currencies) {
-            console.log(`  ${r.currency}: CB=${r.centralBankTone}, Rate=${r.rateDifferential}, Commodity=${r.commodityTailwind}`);
+            console.log(`  ${r.currency}: ${r.centralBankTone} - ${r.justification}`);
           }
         }
       } else {
