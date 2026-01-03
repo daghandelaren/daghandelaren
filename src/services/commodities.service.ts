@@ -78,9 +78,10 @@ async function scrapeCommodityPrice(
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     // Get commodity-specific price range for validation
+    // Note: Copper on Trading Economics is USD per pound (not per tonne)
     const priceRanges: Record<string, [number, number]> = {
-      IRON_ORE: [50, 250],    // Iron ore typically $80-$150
-      COPPER: [6000, 12000],  // Copper typically $8000-$10000
+      IRON_ORE: [50, 250],    // Iron ore typically $80-$150 per dry metric ton
+      COPPER: [3, 8],         // Copper typically $4-5 USD per pound (COMEX)
       DAIRY: [10, 30],        // Class III Milk typically $15-25 per cwt
     };
     const [minPrice, maxPrice] = priceRanges[commodity] || [1, 15000];
@@ -97,8 +98,8 @@ async function scrapeCommodityPrice(
           /62%\s*Fe.*?(\d+\.?\d*)\s+/i,
         ],
         COPPER: [
-          /Copper\s+(\d{1,2},?\d{3}\.?\d*)\s+/i,  // Matches "8,965.50" or "8965.50"
-          /Copper\s+(\d+\.?\d*)\s+[-+]?\d/i,       // Matches "8965 -50"
+          /Copper\s+(\d+\.\d+)\s+[-+]?\d/i,        // Matches "4.52 -0.05" (USD per pound)
+          /Copper\s+(\d+\.\d{2,4})\s+/i,           // Matches "4.5234"
         ],
         DAIRY: [
           /Milk\s+(\d+\.?\d*)\s+[-+]?\d/i,         // Matches "19.85 -0.05"

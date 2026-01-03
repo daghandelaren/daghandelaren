@@ -51,12 +51,14 @@ export default function FundamentalsAdmin() {
   const [scrapingPmi, setScrapingPmi] = useState(false);
   const [scrapingYields, setScrapingYields] = useState(false);
   const [scrapingCommodities, setScrapingCommodities] = useState(false);
+  const [scrapingFred, setScrapingFred] = useState(false);
   const [dataUpdateLog, setDataUpdateLog] = useState<{
     cpi: string | null;
     pmi: string | null;
     yields: string | null;
     commodities: string | null;
-  }>({ cpi: null, pmi: null, yields: null, commodities: null });
+    fred: string | null;
+  }>({ cpi: null, pmi: null, yields: null, commodities: null, fred: null });
 
   // Fetch data
   const fetchData = async () => {
@@ -287,6 +289,30 @@ export default function FundamentalsAdmin() {
     }
   };
 
+  // Scrape FRED data (VIX, US 2Y Yield, WTI Oil)
+  const scrapeFredData = async () => {
+    if (!confirm('Fetch FRED data (VIX, US 2Y Yield, WTI Oil)?')) return;
+
+    setScrapingFred(true);
+    try {
+      const res = await fetch('/api/fundamental/fred-data', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success !== false) {
+        await fetchData();
+        await fetchDataStatus();
+        alert(`FRED data updated: VIX(${data.details?.vix || 0}), US2Y(${data.details?.usYield || 0}), Oil(${data.details?.oil || 0})`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('FRED scrape error:', error);
+      alert('Failed to fetch FRED data');
+    } finally {
+      setScrapingFred(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -433,13 +459,23 @@ export default function FundamentalsAdmin() {
               )}
               {scrapingCommodities ? 'Scraping...' : 'Scrape Commodities'}
             </button>
+            <button
+              onClick={scrapeFredData}
+              disabled={scrapingFred}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {scrapingFred && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              )}
+              {scrapingFred ? 'Fetching...' : 'Fetch FRED Data'}
+            </button>
           </div>
         </div>
 
         {/* Data Update Log */}
         <div className="border-t border-border-primary pt-4">
           <h4 className="text-sm font-medium text-text-primary mb-3">Last Updated</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             <div className="p-3 bg-surface-secondary rounded-lg">
               <div className="text-xs text-text-muted mb-1">CPI</div>
               <div className="text-sm text-text-primary font-mono">
@@ -469,6 +505,14 @@ export default function FundamentalsAdmin() {
               <div className="text-sm text-text-primary font-mono">
                 {dataUpdateLog.commodities
                   ? new Date(dataUpdateLog.commodities).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Never'}
+              </div>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <div className="text-xs text-text-muted mb-1">FRED (VIX/Oil)</div>
+              <div className="text-sm text-text-primary font-mono">
+                {dataUpdateLog.fred
+                  ? new Date(dataUpdateLog.fred).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
                   : 'Never'}
               </div>
             </div>

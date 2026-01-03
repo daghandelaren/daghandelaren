@@ -39,11 +39,18 @@ export async function GET() {
       select: { createdAt: true },
     });
 
+    // Get latest VIX data update (FRED)
+    const latestVixUpdate = await prisma.vixData.findFirst({
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    });
+
     return NextResponse.json({
       cpi: latestCpiUpdate?.lastUpdated?.toISOString() || null,
       pmi: latestPmiUpdate?.lastUpdated?.toISOString() || null,
       yields: latestYieldUpdate?.createdAt?.toISOString() || null,
       commodities: latestCommodityUpdate?.createdAt?.toISOString() || null,
+      fred: latestVixUpdate?.date?.toISOString() || null,
     });
   } catch (error) {
     console.error('Data status error:', error);
